@@ -77,42 +77,12 @@ class StudentController extends AbstractController
                 'method' => 'GET'
             ]
         ];
-
-
-//  "login": { "href": "http://192.168.1.5/api/students/3001/login", "method": "GET" }
-
-// Ten odnośnik prowadzi do endpointu login dla konkretnego studenta. Jest to użyteczne, jeśli chcesz, aby użytkownicy mogli logować się jako konkretny student. 
-// Pamiętaj jednak, że logowanie zazwyczaj wymaga metody POST, a nie GET, ponieważ musisz przesłać dane uwierzytelniające (takie jak hasło).
-
-// "href": "http://192.168.1.5/api/users/101", "method": "GET"
-
-// Ten odnośnik prowadzi do szczegółów konkretnego użytkownika. Jest to użyteczne, jeśli chcesz, aby użytkownicy mogli przeglądać szczegóły konkretnych użytkowników.
-
-// Jeśli chcesz, aby użytkownicy mogli logować się jako studenci i przeglądać szczegóły użytkowników, możesz dostarczyć oba odnośniki. Jeśli chcesz, aby użytkownicy 
-// mogli tylko przeglądać szczegóły użytkowników, dostarcz tylko drugi odnośnik. Jeśli chcesz, aby użytkownicy mogli logować się jako studenci, dostarcz tylko pierwszy 
-// odnośnik (ale prawdopodobnie zmień metodę na POST).
        
-foreach ($students as $student) {
-    $studentData = $student->toArray();
-    $studentData['_links'] = $this->entityService->generateHateoasLinks($student, $linksConfig, $this->urlGenerator);
-    $data[] = $studentData;
-}
-
-       
-        // foreach ($students as $student) {
-        //     $studentData = $student->toArray();
-        //     $studentData['_links'] = [
-        //         'self' => [
-        //             'href' => $this->urlGenerator->generate('api_students_id', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-        //             'method' => 'GET'
-        //         ],
-        //         'login' => [
-        //             'href' => $this->urlGenerator->generate('api_students_login', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-        //             'method' => 'GET'
-        //         ]
-        //     ];
-        //     $data[] = $studentData;
-        // }
+        foreach ($students as $student) {
+            $studentData = $student->toArray();
+            $studentData['_links'] = $this->entityService->generateHateoasLinks($student, $linksConfig, $this->urlGenerator);
+            $data[] = $studentData;
+            }    
 
         $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);

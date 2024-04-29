@@ -5,6 +5,7 @@ use App\Entity\Student;
 use App\Entity\Teacher;
 use App\Entity\Course;
 use App\Entity\Enrollment;
+use App\Entity\User;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
