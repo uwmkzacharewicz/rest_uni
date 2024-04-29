@@ -4,6 +4,76 @@ nelmio_api_doc:
             title: My App
             description: This is an awesome app!
             version: 1.0.0
+        components:
+            schemas:
+                User:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1002
+                        email:
+                            type: string
+                            example: "John Doe"
+                        roles:
+                            type: array
+                            example: ["ROLE_USER"]
+                            items:
+                                type: string
+                                
+                        createdAt:
+                            type: string
+                            format: date-time
+                        updatedAt:
+                            type: string
+                            format: date-time
+                Teacher:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                        specialization:
+                            type: string
+                        login:
+                            $ref: '#/components/schemas/User'
+                Student:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                        name:
+                            type: string
+                        email:
+                            type: string
+                        group:
+                            type: string
+                        login:
+                            $ref: '#/components/schemas/User'
+                Course:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 4002
+                        title:
+                            type: string
+                            example: "Sieci komputerowe"
+                        description:
+                            type: string
+                            example: "Internet, sieci, protokoły"
+                        teacher:
+                            $ref: '#/components/schemas/Teacher'
+                        capacity:
+                            type: integer  
+                            example: 10
+                        active:
+                            type: boolean
+                            example: true                          
+                
     areas: # to filter documented areas
         path_patterns:
             - ^/api(?!/doc$) # Accepts routes under /api except /api/doc

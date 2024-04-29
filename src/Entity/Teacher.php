@@ -127,4 +127,13 @@ class Teacher
 
         return $this;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'name' => $this->getName(),
+            'specialization' => $this->getSpecialization(),
+        ];
+    }
 }

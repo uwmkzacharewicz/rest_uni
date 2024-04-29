@@ -143,4 +143,15 @@ class Course
 
         return $this;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'title' => $this->getTitle(),
+            'description' => $this->getDescription(),
+            'capacity' => $this->getCapacity(),
+            'active' => $this->isActive(),
+        ];
+    }
 }
