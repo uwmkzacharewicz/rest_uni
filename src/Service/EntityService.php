@@ -72,16 +72,49 @@ class EntityService
     }
 
     // dodanie nowego studenta
-    public function addStudent(string $name, string $email, string $username, string $password): void
+    public function addStudent(string $name, string $email, string $username, string $password): ?Student
     {
-        $user = new User();
-        $user->setUsername($username);
-        $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
-        $user->setPassword($hashedPassword);
-        $user->setRoles([Role::ROLE_STUDENT]);        
-        $student = Student::create($name, $email, $user);
-        $this->entityManager->persist($student);
-        $this->entityManager->flush();
+         // Rozpoczęcie transakcji
+         $this->entityManager->beginTransaction();
+
+        try {           
+    
+            // Sprawdzenie, czy użytkownik z daną nazwą użytkownika już istnieje
+        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+        if ($existingUser) {
+            throw new \Exception('Istnieje już użytkownik o podanym username.');
+        }
+    
+            // Tworzenie nowego użytkownika
+            $user = new User();
+            $user->setUsername($username);
+            $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
+            $user->setPassword($hashedPassword);
+            $user->setRoles([Role::ROLE_STUDENT]);
+            $this->entityManager->persist($user);
+    
+            // Tworzenie obiektu studenta
+            $student = new Student();
+            $student->setName($name);
+            $student->setEmail($email);
+            $student->setUser($user);
+            $this->entityManager->persist($student);
+    
+            // Zatwierdzenie transakcji
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+    
+            return $student;
+
+        } catch (UniqueConstraintViolationException $e) {
+            // Obsługa specyficznych wyjątków związanych z naruszeniem ograniczeń
+            $this->entityManager->rollback();
+            throw new \Exception('Database error: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            // Ogólna obsługa wyjątków
+            $this->entityManager->rollback();
+            throw new \Exception('Application error: ' . $e->getMessage());
+        }
     }
 
 

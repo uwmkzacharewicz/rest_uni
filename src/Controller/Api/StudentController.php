@@ -206,20 +206,27 @@ class StudentController extends AbstractController
         }
 
         // utworzenie studenta
-        $newStudent = $this->entityService->addStudent($data['name'], $data['email'], $data['username'], $data['password']);       
-       
-        // Przygotowanie i zwrócenie odpowiedzi z nowym studentem
-        $data = [
-            'id' => $newStudent->getId(),
-            'name' => $newStudent->getName(),
-            'email' => $newStudent->getEmail(),
-            '_links' => [
-                'self' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $newStudent->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                'allCourses' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $newStudent->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                
-            ]  
-        ];
+        $newStudent = $this->entityService->addStudent($data['name'], $data['email'], $data['username'], $data['password']);  
         
+        $data = [];
+
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'login' => [
+                'route' => 'api_students_login',
+                'param' => 'id',
+                'method' => 'GET'
+            ]
+        ];
+
+        $studentData = $newStudent->toArray();
+        $studentData['_links'] = $this->entityService->generateHateoasLinks($newStudent, $linksConfig, $this->urlGenerator);
+        $data[] = $studentData;
+
         $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
         return new Response($jsonContent, 201, ['Content-Type' => 'application/json']);
         return $this->json($data, JsonResponse::HTTP_CREATED);
