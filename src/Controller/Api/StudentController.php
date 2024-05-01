@@ -174,6 +174,63 @@ class StudentController extends AbstractController
         return $this->json($data);
     }
 
+    /**
+     * Dodaje nowego studenta.
+     *
+     * Wywołanie dodaje nowego studenta na podstawie przekazanych danych.
+     * 
+     */ 
+    #[Route('/students', name: 'api_students_create', methods: ['POST'])]
+    #[OA\Tag(name: "Operacje na studentach")]
+    #[OA\Response(
+        response: 201,
+        description: 'Dodaje studenta',
+        content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Student::class))
+        ))
+    ]
+    #[OA\Response(
+        response: 400,
+        description: 'Bad Request'
+    )]
+    public function createStudent(Request $request): Response
+    {
+        // Pobranie danych z żądania
+        $data = json_decode($request->getContent(), true);
+        
+        // Sprawdzenie, czy przekazano wymagane dane
+        if (!isset($data['name']) || !isset($data['email']) || !isset($data['username']) || !isset($data['password'])){        
+            // Jeśli nie przekazano wymaganych danych, zwróć odpowiedź z błędem 400
+            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // utworzenie studenta
+        $newStudent = $this->entityService->addStudent($data['name'], $data['email'], $data['username'], $data['password']);       
+       
+        // Przygotowanie i zwrócenie odpowiedzi z nowym studentem
+        $data = [
+            'id' => $newStudent->getId(),
+            'name' => $newStudent->getName(),
+            'email' => $newStudent->getEmail(),
+            '_links' => [
+                'self' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $newStudent->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
+                'allCourses' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $newStudent->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
+                
+            ]  
+        ];
+        
+        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
+        return new Response($jsonContent, 201, ['Content-Type' => 'application/json']);
+        return $this->json($data, JsonResponse::HTTP_CREATED);
+    }
+
+
+
+
+
+
+
     // /students/3001/courses
     #[Route('/students/{id}/courses', name: 'api_students_courses', methods: ['GET'])]
     #[OA\Tag(name: "Operacje na studentach")]
@@ -228,63 +285,5 @@ class StudentController extends AbstractController
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
         return $this->json($data);
     }
-
-    /**
-     * Tworzy nowego studenta.
-     *
-     * Wywołanie tworzy nowego studenta na podstawie przekazanych danych.
-     * 
-     */
-    #[Route('/students', name: 'api_students_create', methods: ['POST'])]
-    #[OA\Tag(name: "Operacje na studentach")]
-    #[OA\Response(
-        response: 201,
-        description: 'Dodaje studenta',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]
-    public function createStudent(Request $request): Response
-    {
-        // Pobranie danych z żądania
-        $data = json_decode($request->getContent(), true);
-        
-        // Sprawdzenie, czy przekazano wymagane dane
-        if (!isset($data['name']) || !isset($data['email'])) {
-            // Jeśli nie przekazano wymaganych danych, zwróć odpowiedź z błędem 400
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
-        }
-        
-        // Utworzenie nowego obiektu studenta
-        $student = new Student();
-        $student->setName($data['name']);
-        $student->setEmail($data['email']);
-        
-        // Zapisanie studenta w bazie danych
-        $this->entityManager->persist($student);
-        $this->entityManager->flush();
-        
-        // Przygotowanie i zwrócenie odpowiedzi z nowym studentem
-        $data = [
-            'id' => $student->getId(),
-            'name' => $student->getName(),
-            'email' => $student->getEmail(),
-            '_links' => [
-                'self' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                'allCourses' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                
-            ]  
-        ];
-        
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 201, ['Content-Type' => 'application/json']);
-        return $this->json($data, JsonResponse::HTTP_CREATED);
-    }
-
 
 }

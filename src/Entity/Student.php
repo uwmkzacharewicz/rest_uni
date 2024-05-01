@@ -35,6 +35,17 @@ class Student
         $this->enrollments = new ArrayCollection();
     }
 
+    // kontsruktor tworzenia nowego studenta
+    public static function create(string $name, string $email, User $login): self
+    {
+        $student = new self();
+        $student->setName($name);
+        $student->setEmail($email);
+        $student->setUser($login);
+
+        return $student;
+    }
+
     public function getId(): ?int
     {
         return $this->id;

@@ -6,17 +6,20 @@ use App\Entity\Teacher;
 use App\Entity\Course;
 use App\Entity\Enrollment;
 use App\Entity\User;
+use App\Security\Role;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 class EntityService
 {
     private $entityManager;
 
-    public function __construct(EntityManagerInterface $entityManager)
+    public function __construct(EntityManagerInterface $entityManager, UserPasswordHasherInterface $passwordHasher)
     {
         $this->entityManager = $entityManager;
+        $this->passwordHasher = $passwordHasher;
     }
 
     public function generateHateoasLinks($entity, array $linksConfig, UrlGeneratorInterface $urlGenerator)
@@ -66,6 +69,19 @@ class EntityService
     public function findStudent(int $id): ?Student
     {
         return $this->entityManager->getRepository(Student::class)->find($id);
+    }
+
+    // dodanie nowego studenta
+    public function addStudent(string $name, string $email, string $username, string $password): void
+    {
+        $user = new User();
+        $user->setUsername($username);
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $password);
+        $user->setPassword($hashedPassword);
+        $user->setRoles([Role::ROLE_STUDENT]);        
+        $student = Student::create($name, $email, $user);
+        $this->entityManager->persist($student);
+        $this->entityManager->flush();
     }
 
 
