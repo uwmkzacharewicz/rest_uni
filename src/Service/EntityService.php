@@ -53,6 +53,42 @@ class EntityService
         return $this->entityManager->getRepository(User::class)->find($id);
     }
 
+    // dodanie nowego użytkownika
+    public function addUser(string $username, string $password, array $roles): ?User
+    {
+        // Rozpoczęcie transakcji
+        $this->entityManager->beginTransaction();
+        try {               
+            // Sprawdzenie, czy użytkownik z daną nazwą użytkownika już istnieje
+        $existingUser = $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);
+        if ($existingUser) {
+            throw new \Exception('Istnieje już użytkownik o podanym username.');
+        }    
+            // Tworzenie nowego użytkownika
+            $newUser = new User();
+            $newUser->setUsername($username);
+            $hashedPassword = $this->passwordHasher->hashPassword($newUser, $password);
+            $newUser->setPassword($hashedPassword);
+            $newUser->setRoles($roles);
+            $this->entityManager->persist($newUser);   
+           
+            // Zatwierdzenie transakcji
+            $this->entityManager->flush();
+            $this->entityManager->commit();
+    
+            return $newUser;
+
+        } catch (UniqueConstraintViolationException $e) {
+            // Obsługa specyficznych wyjątków związanych z naruszeniem ograniczeń
+            $this->entityManager->rollback();
+            throw new \Exception('Database error: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            // Ogólna obsługa wyjątków
+            $this->entityManager->rollback();
+            throw new \Exception('Application error: ' . $e->getMessage());
+        }
+    }
+
     /******************************** STUDENT ********************************/
 
     /**

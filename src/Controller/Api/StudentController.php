@@ -194,6 +194,11 @@ class StudentController extends AbstractController
         response: 400,
         description: 'Bad Request'
     )]
+    #[OA\RequestBody(
+        description: 'Dane nowego użytkownika',
+        required: true,
+        content: new OA\JsonContent(ref: "#/components/schemas/NewStudent")
+    )] 
     public function createStudent(Request $request): Response
     {
         // Pobranie danych z żądania

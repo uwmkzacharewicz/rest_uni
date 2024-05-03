@@ -7,6 +7,7 @@ use App\Entity\Teacher;
 use App\Entity\Course;
 use App\Entity\Enrollment;
 use App\Security\Role;
+use App\Service\EntityService;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -32,11 +33,11 @@ class CourseController extends AbstractController
 {
     private $urlGenerator;
     private $serializer;
-    private $entityManager;
+    private $entityService;
 
-    public function __construct(EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator, SerializerInterface $serializer) {
+    public function __construct(EntityService $entityService, UrlGeneratorInterface $urlGenerator, SerializerInterface $serializer) {
 
-            $this->entityManager = $entityManager;
+            $this->entityService = $entityService;
             $this->urlGenerator = $urlGenerator;
             $this->serializer = $serializer;
     }
@@ -46,6 +47,7 @@ class CourseController extends AbstractController
     public function test(int $id) : Response
     {
         $course = $this->entityManager->getRepository(Course::class)->find($id);
+        
         
         if (!$course) {
             return new JsonResponse(['message' => 'Course not found'], 404);
@@ -209,13 +211,22 @@ class CourseController extends AbstractController
     #[OA\RequestBody(
         description: 'Dane kursu',
         required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/Course")
+        content: new OA\JsonContent(ref: "#/components/schemas/NewCourse")
     )]
     #[Route('/courses', name: 'api_courses_add', methods: ['POST'])]
     public function addCourse(Request $request) : Response
     {
         $data = json_decode($request->getContent(), true);
-        
+
+        if (empty($data['title']) || empty($data['description']) || empty($data['teacher_id']) || !isset($data['capacity']) || !isset($data['active'])) {
+            return $this->json(['error' => 'Missing data'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $teacher = $entityService->findTeacher($data['teacher_id']);       
+        if (!$teacher) {
+             return $this->json(['error' => 'Teacher not found'], Response::HTTP_NOT_FOUND);
+        }
+
         $course = new Course();
         $course->setTitle($data['title']);
         $course->setDescription($data['description']);

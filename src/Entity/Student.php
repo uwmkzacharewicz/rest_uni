@@ -22,6 +22,7 @@ class Student
     private ?string $email = null;
 
     #[ORM\OneToOne(cascade: ['persist', 'remove'])]
+    #[ORM\JoinColumn(name: "login_id", referencedColumnName: "id", onDelete: "SET NULL")]
     private ?User $login = null;
 
     /**

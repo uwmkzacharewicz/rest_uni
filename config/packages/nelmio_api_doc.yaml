@@ -5,28 +5,74 @@ nelmio_api_doc:
             description: This is an awesome app!
             version: 1.0.0
         components:
+            responses:
+                UserList200:
+                    description: 'Zwraca listę użytkowników'
+                    content:
+                        application/json:
+                            schema:
+                                type: array
+                                items:
+                                    $ref: '#/components/schemas/User'
+                            examples:
+                                userList:
+                                    summary: 'Przykładowa lista użytkowników'
+                                    value:
+                                        - id: 1
+                                          name: 'John Doe'
+                                          email: 'john.doe@example.com'
+                                          _links:
+                                              self:
+                                                  href: 'http://example.com/api/users/1000'
+                                                  method: 'GET'
+                                              login:
+                                                  href: 'http://example.com/api/users/1000/login'
+                                                  method: 'POST'
+                NotFound404:
+                    description: 'Nie znaleziono użytkowników'
+                    content:
+                        application/json:
+                            examples:
+                                notFound:
+                                    summary: 'Przykład odpowiedzi 404'
+                                    value: { message: 'Nie znaleziono użytkowników' }
+            securitySchemes:
+                bearerAuth:          
+                    type: http
+                    scheme: bearer
+                    bearerFormat: JWT   
             schemas:
                 User:
                     type: object
                     properties:
-                        id:
-                            type: integer
-                            example: 1002
-                        email:
+                        username:
                             type: string
-                            example: "John Doe"
+                            example: "john.doe"
+                        password:
+                            type: string
+                            example: "john.doe"
+                NewUser:
+                    type: object
+                    properties:
+                        username:
+                            type: string
+                            example: "john.doe"
+                        password:
+                            type: string
+                            example: "john.doe" 
                         roles:
                             type: array
-                            example: ["ROLE_USER"]
                             items:
                                 type: string
-                                
-                        createdAt:
-                            type: string
-                            format: date-time
-                        updatedAt:
-                            type: string
-                            format: date-time
+                            example: ["ROLE_USER"]     
+                Roles:
+                    type: object
+                    properties:
+                        roles:
+                            type: array
+                            items:
+                                type: string
+                            example: ["ROLE_USER", "ROLE_ADMIN"]                       
                 Teacher:
                     type: object
                     properties:
@@ -44,7 +90,8 @@ nelmio_api_doc:
                     type: object
                     properties:
                         id:
-                            type: integer
+                            name: integer
+                            example: "John Doe" 
                         name:
                             type: string
                         email:
@@ -53,6 +100,21 @@ nelmio_api_doc:
                             type: string
                         login:
                             $ref: '#/components/schemas/User'
+                NewStudent:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            example: "John Doe"
+                        email:
+                            type: string
+                            example: "johndoe@example.com" 
+                        username:
+                            type: string
+                            example: "john.doe"
+                        password:
+                            type: string
+                            example: "password"                        
                 Course:
                     type: object
                     properties:
@@ -72,7 +134,33 @@ nelmio_api_doc:
                             example: 10
                         active:
                             type: boolean
-                            example: true                          
+                            example: true  
+                NewCourse:
+                    type: object
+                    properties:
+                        title:
+                            type: string
+                            example: "Sieci komputerowe"
+                        description:
+                            type: string
+                            example: "Internet, sieci, protokoły"
+                        teacher_id:
+                            type: integer
+                            example: 1                        
+                        capacity:
+                            type: integer  
+                            example: 10
+                        active:
+                            type: boolean
+                            example: true 
+                    required:
+                        - title
+                        - description
+                        - capacity
+                        - active
+                        - teacher_id
+        security:
+            # - bearerAuth: []           # Zastosowanie globalne dla wszystkich endpointów                        
                 
     areas: # to filter documented areas
         path_patterns:
