@@ -2,32 +2,23 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Student;
-use App\Entity\Teacher;
-use App\Entity\Course;
-use App\Entity\Enrollment;
-use App\Security\Role;
 use App\Service\UserService;
 use App\Service\UtilityService;
+use App\Security\Role;
 
-
-
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use JMS\Serializer\SerializerBuilder;
+
 use JMS\Serializer\SerializerInterface;
-use Nelmio\ApiDocBundle\Annotation\Model;
 use Nelmio\ApiDocBundle\Annotation\Security;
 
-use Psr\Log\LoggerInterface;
+
 use OpenApi\Attributes as OA;
 
 
@@ -52,8 +43,7 @@ class UserController extends AbstractController
      *
      * Wywołanie wyświetla wszystkich użytkowników wraz z ich linkiem do szczegółów.
      * 
-     */
-    
+     */    
     #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
     #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
     #[Route('/users', name: 'api_users', methods: ['GET'])]
@@ -97,7 +87,14 @@ class UserController extends AbstractController
     #[Route('/users/{id}', name: 'api_users_id', methods: ['GET'])]
     public function getUserbyId(int $id) : Response
     {
-        $users = $this->userService->findUser($id);
+        $user = $this->userService->findUser($id);
+
+         // Sprawdzenie, czy student został znaleziony
+         if (!$user) {
+            // Jeśli nie znaleziono studenta, zwróć odpowiedź z błędem 404
+            return $this->json(['error' => 'Nie znaleziono użytkownika o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
+        }
+
         $data = [];
 
         $linksConfig = [
@@ -115,8 +112,7 @@ class UserController extends AbstractController
 
         $userData = $user->toArray();            
         $userData['_links'] = $this->utilityService->generateHateoasLinks($user, $linksConfig);
-        $data[] = $userData;
-        
+        $data[] = $userData;        
 
         $jsonContent = $this->utilityService->serializeJson($data);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
@@ -137,20 +133,22 @@ class UserController extends AbstractController
     #[Route('/users', name: 'api_users_add', methods: ['POST'])]
     public function addUser(Request $request) : Response
     {
-       // Pobranie danych z żądania
-       $data = json_decode($request->getContent(), true);
-       if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('JSON decode error: ' . json_last_error_msg());
+
+        try {
+            // Pobranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, ['username', 'password', 'roles']);
+        } catch (\Exception $e) {
+            // Obsługa wyjątków
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-       // Sprawdzenie, czy przekazano wymagane dane
-       if (!isset($data['username']) || !isset($data['password']) || !isset($data['roles'])){        
-           // Jeśli nie przekazano wymaganych danych, zwróć odpowiedź z błędem 400
-           return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
-       }
-
+       // Sprawdź, czy użytkownik o danym username już istnieje
+        $existingUser = $this->userService->findUserByUsername($data['username']);
+        if ($existingUser) {
+            return $this->json(['error' => "Użytkownik o nazwie {$data['username']} już istnieje"], JsonResponse::HTTP_CONFLICT);
+        }
        // utworzenie user
-       $newUser = $this->entityService->addUser($data['username'], $data['password'], $data['roles']);  
+       $newUser = $this->userService->addUser($data['username'], $data['password'], $data['roles']);  
        
        $data = [];
 
@@ -168,7 +166,7 @@ class UserController extends AbstractController
        ];
 
        $userData = $newUser->toArray();
-       $userData['_links'] = $this->entityService->generateHateoasLinks($newUser, $linksConfig, $this->urlGenerator);
+       $userData['_links'] = $this->utilityService->generateHateoasLinks($newUser, $linksConfig);
        $data[] = $userData;
 
        $jsonContent = $this->utilityService->serializeJson($data);
@@ -188,25 +186,21 @@ class UserController extends AbstractController
     #[OA\Response(response: 200, ref: '#/components/responses/UserList200' )]
     #[OA\Response(response: 404, ref: '#/components/responses/NotFound404'
     )]
-    public function updateUser(Request $request, int $id, LoggerInterface $logger): Response
+    public function updateUser(Request $request, int $id): Response
     {
-        $data = json_decode($request->getContent(), true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Błąd dekodowania JSON: ' . json_last_error_msg());
+        try {
+            // Pobranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, ['username', 'password']);
+        } catch (\Exception $e) {
+            // Obsługa wyjątków
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_BAD_REQUEST);
         }
-
-        // Sprawdzenie, czy kluczowe dane zostały przekazane
-        if (empty($data['username']) || empty($data['password'])) {           
-            return $this->json(['error' => 'Wymagane są username i password.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $roles = $data['roles'] ?? [];
+        $roles = $data['roles'] ?? [Role::ROLE_USER];
 
         try {
             $user = $this->userService->editUser($id, $data['username'], $data['password'], $roles);
             return $this->json(['status' => 'Użytkownik został zaktualizowany', 'user' => $user], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            $logger->error('Błąd aktualizacji użytkownika: ' . $e->getMessage(), ['id' => $id]);
+        } catch (\Exception $e) {           
             return $this->json(['error' => $e->getMessage()], Response::HTTP_BAD_REQUEST);
         }
     }
@@ -225,40 +219,37 @@ class UserController extends AbstractController
     )]
     #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
     #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
-    public function patchUser(Request $request, int $id, LoggerInterface $logger): Response
+    public function patchUser(Request $request, int $id): Response
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
             return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
 
-        $user = $this->userService->findUser($id);
-        if (!$user) {
-            return $this->json(['error' => 'User not found'], Response::HTTP_NOT_FOUND);
-        }
-
-        // Aktualizacja dostępnych pól
-        if (isset($data['username'])) {
-            $user->setUsername($data['username']);
-        }
-        if (isset($data['password'])) {
-            // hashowanie hasła
-            $password = $this->utilityService->hashPassword($user, $data['password']);
-            $user->setPassword($password);
-        }
-
-        if (isset($data['roles'])) {
-            $user->setRoles($data['roles']);
-        }
-
         try {
-            $updatedUser = $this->userService->updateUser($user);
-            return $this->json(['status' => 'User updated', 'user' => $updatedUser], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            $logger->error('Error updating user: ' . $e->getMessage(), ['id' => $id]);
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }
+            $updatedUser = $this->userService->updateUserFields($id, $data);
+
+            $linksConfig = [
+                'self' => [
+                    'route' => 'api_users_id',
+                    'param' => 'id',
+                    'method' => 'GET'
+                ]
+            ];
+        
+            $userData['user_info'] = $updatedUser->toArray();
+            $userData['_links'] = $this->utilityService->generateHateoasLinks($updatedUser, $linksConfig);        
+            $status = ['status' => 'Zaktualizowano użytkownika.'];
+            $data = array_merge($status, $userData);
+        
+            $jsonContent = $this->utilityService->serializeJson($data);
+            return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+        
+        } catch (\Exception $e) {           
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        }        
     }
+   
 
     /**
      * Usuwa użytkownika.
@@ -267,28 +258,19 @@ class UserController extends AbstractController
      * 
      */
     #[Route('/users/{id}', name: 'api_users_delete', methods: ['DELETE'])]
-    #[OA\Response(
-        response: 200,
-        ref: '#/components/responses/UserList200'
-    )]
-    #[OA\Response(
-        response: 404,
-        ref: '#/components/responses/NotFound404'
-    )]
-    public function deleteUser(int $id, LoggerInterface $logger): Response
+    #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
+    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404' )]
+    public function deleteUser(int $id): Response
     {
         try {
             $this->userService->deleteUser($id);
-            return $this->json(['status' => 'User deleted'], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            $logger->error('Error deleting user: ' . $e->getMessage(), ['id' => $id]);
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return $this->json(['status' => 'Usunięto użytkownika.'], Response::HTTP_OK);
+        } catch (\Exception $e) {           
+            return $this->json(['error' => $e->getMessage(), 'code' => Response::HTTP_NOT_FOUND], Response::HTTP_NOT_FOUND);
         }
     }
 
     
-
-
     /**
      * Loguje użytkownika.
      *
@@ -296,17 +278,37 @@ class UserController extends AbstractController
      * 
      */
     #[Route('/users/{id}/login', name: 'api_users_login', methods: ['POST'])]
-    public function login(int $id) : Response
+    public function loginUser(int $id, Request $request) : Response
     {
-        $user = $this->entityService->findUser($id);
+        $user = $this->userService->findUser($id);
+
         if (!$user) {
             throw new HttpException(404, 'User not found');
         }
-        return new JsonResponse([
-            'user' => $user
+
+        // Pobranie danych z żądania
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('JSON decode error: ' . json_last_error_msg());
+        }
+
+        // Sprawdzenie, czy przekazano hasło
+        if (!isset($data['password'])) {
+            return $this->json(['error' => 'Password is required'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Sprawdzenie poprawności hasła
+        if (!$this->userService->isPasswordValid($user, $data['password'])) {
+            return $this->json(['error' => 'Invalid password'], JsonResponse::HTTP_UNAUTHORIZED);
+        }
+
+        return $this->json([
+            'username' => $user->getUsername(),
+            'roles' => $user->getRoles(),
+            'token' => $this->container->get('lexik_jwt_authentication.encoder')
+                ->encode(['username' => $user->getUsername()]),
         ]);
     }
-
     
     
     

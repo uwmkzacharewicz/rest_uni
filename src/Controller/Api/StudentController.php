@@ -7,7 +7,9 @@ use App\Entity\Teacher;
 use App\Entity\Course;
 use App\Entity\Enrollment;
 use App\Security\Role;
-use App\Service\EntityService;
+use App\Service\UtilityService;
+use App\Service\StudentService;
+
 
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -28,18 +30,20 @@ use Psr\Log\LoggerInterface;
 use OpenApi\Attributes as OA;
 
 
+#[OA\Tag(name: "Studenci")]
+#[Security(name: 'Bearer')]
 #[Route("/api", "")]
 class StudentController extends AbstractController
 {
-    private $urlGenerator;
     private $serializer;
-    private $entityService;
+    private $studentService;
+    private $utilityService;
 
-    public function __construct(EntityService $entityService, UrlGeneratorInterface $urlGenerator, SerializerInterface $serializer) {
+    public function __construct(StudentService $studentService, SerializerInterface $serializer, UtilityService $utilityService) {
 
-            $this->entityService = $entityService;
-            $this->urlGenerator = $urlGenerator;
+            $this->studentService = $studentService;
             $this->serializer = $serializer;
+            $this->utilityService = $utilityService;
     }
 
     /**
@@ -48,20 +52,12 @@ class StudentController extends AbstractController
      * Wywołanie wyświetla wszystkich studentów wraz z ich linkiem do szczegółów.
      * 
      */
+    #[OA\Response(response: 200, description: 'Zwraca listę studentów')]
+    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/students', name: 'api_students', methods: ['GET'])]
-    #[OA\Tag(name: "Operacje na studentach")]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca listę studentów'       
-        )
-    ]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
     public function getStudents()
     {
-        $students = $this->entityService->findAllStudents();
+        $students = $this->studentService->findAllStudents();
 
         $data = [];
 
@@ -71,69 +67,30 @@ class StudentController extends AbstractController
                 'param' => 'id',
                 'method' => 'GET'
             ],
-            'login' => [
+            'loginData' => [
                 'route' => 'api_students_login',
                 'param' => 'id',
                 'method' => 'GET'
-            ]
-        ];
+            ],
+            'allCourses' => [
+                'route' => 'api_students_login',
+                'param' => 'id',
+                'method' => 'GET'
+        ] ];
        
         foreach ($students as $student) {
             $studentData = $student->toArray();
-            $studentData['_links'] = $this->entityService->generateHateoasLinks($student, $linksConfig, $this->urlGenerator);
+            //$studentData['login'] = $student->getUser() ? $student->getUser()->toArray() : null;
+            $studentData['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);
+
             $data[] = $studentData;
-            }    
+        }    
 
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-        return $this->json($data);
-    }
-
-    /**
-     * Wyświetla login studenta.
-     *
-     * Wywołanie wyświetla login studenta o podanym identyfikatorze.
-     * 
-     */ 
-    #[Route('/students/{id}/login', name: 'api_students_login', methods: ['GET'])]
-    #[OA\Tag(name: "Operacje na studentach")]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca login studenta o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
-    public function getStudentLogin(int $id) : Response
-    {
-        $student = $this->entityService->findStudent($id);
-        
-        if (!$student) {
-            return new Response(null, 404);
-        }
-        
-        $login = $student->getLogin();
-        $data = [
-            'id' => $login->getId(),
-            'username' => $login->getUsername(),
-            'roles' => $login->getRoles(),
-            '_links' => [
-                'self' => [
-                    'href' => $this->urlGenerator->generate('api_students_login', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-                ]
-            ]
-        ];
-
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
+        $jsonContent = $this->utilityService->serializeJson($data);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
     }
 
-    /**
+     /**
      * Wyświetla szczegóły studenta.
      *
      * Wywołanie wyświetla szczegóły studenta o podanym identyfikatorze.
@@ -153,9 +110,9 @@ class StudentController extends AbstractController
         response: 404,
         description: 'Not Found'
     )]   
-    public function getStudent(int $id): Response
+    public function getStudentById(int $id): Response
     {
-        $student = $this->entityService->findStudent($id);
+        $student = $this->studentService->findStudent($id);
        
          // Sprawdzenie, czy student został znaleziony
          if (!$student) {
@@ -163,16 +120,88 @@ class StudentController extends AbstractController
             return $this->json(['error' => 'Nie znaleziono studenta o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
         }
 
+        $data = [];
+
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'loginData' => [
+                'route' => 'api_students_login',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'allCourses' => [
+                'route' => 'api_students_login',
+                'param' => 'id',
+                'method' => 'GET'
+        ] ];
+
         $data = $student->toArray();
-        $data['student'] = $student ? $student->toArray() : null;
-        $data['student']['_links'] = ['self' => ['href' => $this->urlGenerator->generate('api_students_id', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                    'allCourses' => ['href' => $this->urlGenerator->generate('api_students_courses', ['id' => $student->getId()], UrlGeneratorInterface::ABSOLUTE_URL)],
-                ];
+        $data['user'] = $student->getUser() ? $student->getUser()->toArray() : null;
+        $data['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);
         
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
+        $jsonContent = $this->utilityService->serializeJson($data);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-        return $this->json($data);
     }
+
+
+
+
+
+
+
+    /**
+     * Wyświetla login studenta.
+     *
+     * Wywołanie wyświetla login studenta o podanym identyfikatorze.
+     * 
+     */ 
+    #[OA\Tag(name: "Operacje na studentach")]
+    #[OA\Response(response: 200, description: 'Zwraca login studenta o podanym identyfikatorze', content: new OA\JsonContent(
+            type: 'array',
+            items: new OA\Items(ref: new Model(type: Student::class))
+        ))
+    ]
+    #[OA\Response(
+        response: 404,
+        description: 'Not Found'
+    )]
+    #[Route('/students/{id}/login', name: 'api_students_login', methods: ['GET'])]
+    public function getStudentLogin(int $id) : Response
+    {
+        $student = $this->studentService->findStudent($id);
+        $login = $this->studentService->findStudentLogin($id);
+
+        if (!$login) {
+            return $this->json(['error' => 'Nie znaleziono loginu dla studenta o id: ' . $id], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $data =[];
+
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_students_login',
+                'param' => 'id',
+                'method' => 'GET' ],
+            'parent' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ]
+            ];
+
+
+        $data['login'] = $login ? $login->toArray() : null;
+        $data['login']['_links'] = $this->utilityService->generateHateoasLinks($login, $linksConfig);
+
+        $jsonContent = $this->utilityService->serializeJson($data);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+    }
+
+   
 
     /**
      * Dodaje nowego studenta.
@@ -211,7 +240,7 @@ class StudentController extends AbstractController
         }
 
         // utworzenie studenta
-        $newStudent = $this->entityService->addStudent($data['name'], $data['email'], $data['username'], $data['password']);  
+        $newStudent = $this->utilityService->addStudent($data['name'], $data['email'], $data['username'], $data['password']);  
         
         $data = [];
 
@@ -229,7 +258,7 @@ class StudentController extends AbstractController
         ];
 
         $studentData = $newStudent->toArray();
-        $studentData['_links'] = $this->entityService->generateHateoasLinks($newStudent, $linksConfig, $this->urlGenerator);
+        $studentData['_links'] = $this->utilityService->generateHateoasLinks($newStudent, $linksConfig, $this->urlGenerator);
         $data[] = $studentData;
 
         $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));

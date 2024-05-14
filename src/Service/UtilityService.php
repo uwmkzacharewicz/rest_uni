@@ -8,6 +8,7 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use JMS\Serializer\SerializerInterface;
 use JMS\Serializer\SerializationContext;
+use Symfony\Component\HttpFoundation\Request;
 
 class UtilityService
 {
@@ -35,6 +36,25 @@ class UtilityService
 
         return $links;
     }
+
+    public function validateAndDecodeJson(Request $request, array $requiredFields): array
+    {
+        // Dekodowanie JSON
+        $data = json_decode($request->getContent(), true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('JSON decode error: ' . json_last_error_msg());
+        }
+
+        // Sprawdzenie, czy przekazano wszystkie wymagane dane
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field])) {
+                throw new \Exception("Nie przekazano wymaganej danej: {$field}");
+            }
+        }
+
+        return $data;
+    }
+
 
     public function serializeJson($data, array $groups = []): string
     {
