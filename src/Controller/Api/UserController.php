@@ -133,7 +133,6 @@ class UserController extends AbstractController
     #[Route('/users', name: 'api_users_add', methods: ['POST'])]
     public function addUser(Request $request) : Response
     {
-
         try {
             // Pobranie i walidacja danych
             $data = $this->utilityService->validateAndDecodeJson($request, ['username', 'password', 'roles']);

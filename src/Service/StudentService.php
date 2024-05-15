@@ -5,6 +5,7 @@ use App\Entity\Student;
 use App\Entity\User;
 use App\Security\Role;
 use App\Service\EntityService;
+use App\Service\UserService;
 use App\Service\UtilityService;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,10 +17,11 @@ class StudentService
     private $entityManager;
     private $entityService;
 
-    public function __construct(EntityManagerInterface $entityManager, EntityService $entityService)
+    public function __construct(EntityManagerInterface $entityManager, EntityService $entityService, UserService $userService)
     {
         $this->entityManager = $entityManager;
         $this->entityService = $entityService;
+        $this->userService = $userService;
     }
 
     // pobranie wszystkich użytkowników
@@ -69,31 +71,57 @@ class StudentService
     }
 
     // dodanie nowego studenta
-    public function addStudent(string $studentName, string $email): ?Student
+    public function createStudentWithPassword(string $studentName, string $email, string $username, string $password): ?Student
+    {
+         // Sprawdź, czy użytkownik o danym username już istnieje
+         $existingUser = $this->entityService->findEntityByFiled(User::class, 'username', $username);
+         if ($existingUser) {
+             return $this->json(['error' => "Użytkownik o nazwie {$username} już istnieje"], JsonResponse::HTTP_CONFLICT);
+         }
+ 
+        // Tworzenie instancji User
+
+        $newUser = $this->userService->addUser($username, $password, [Role::ROLE_STUDENT]);
+        // Dodanie użytkownika za pomocą EntityService
+        $userData = [
+            'username' => $newUser->getUsername(),
+            'password' => $newUser->getPassword(),
+            'roles' => $newUser->getRoles()
+        ];
+
+        // Tworzenie instancji Student i przypisanie użytkownika
+        $studentData = [
+            'name' => $studentName,
+            'email' => $email,
+            'user' => $newUser
+        ];
+        $savedStudent = $this->entityService->addEntity(Student::class, $studentData);
+
+        return $savedStudent;
+    }
+
+    public function addStudentWithoutPassword(string $studentName, string $email): ?Student
     {
         // Tworzenie instancji Student
          // Dodanie użytkownika za pomocą EntityService
-        $data = [
-        'name' => $Studentname,
-        'email' => $hashedPassword
+         $studentData = [
+            'name' => $studentName,
+            'email' => $email,
         ];
-        
-        // Skorzystanie z EntityService do dodania nowej encji
-        $savedStudent = $this->entityService->addEntity(Student::class, $data);
+        $savedStudent = $this->entityService->addEntity(Student::class, $studentData);
 
         return $savedStudent;
     }
 
     // edycja użytkownika
-    public function editStudent(int $id, string $Studentname, string $password, array $roles): ?Student
+    public function editStudent(int $id, string $studentName, string $email): ?Student
     {
         $student = $this->findStudent($id);
         if (!$student) {
             throw new \Exception('Student not found');
         }
-        $student->setStudentname($Studentname);
-        $student->setPassword($this->passwordHasher->hashPassword($student, $password));
-        $student->setRoles($roles);
+        $student->setName($studentName);
+        $student->setEmail($email);
         $this->entityService->updateEntity($student);
 
         return $student;
@@ -106,20 +134,7 @@ class StudentService
 
         $Student = $this->entityService->find(Student::class, $id);
         if (!$Student) {
-            throw new \Exception('Student not found');
-        }
-
-        if (isset($data['password'])) {
-            $data['password'] = $this->passwordHasher->hashPassword($Student, $data['password']);
-        }
-
-        // jezeli zmieniamy role to sprawdzamy czy nowa rola jest poprawna
-        if (isset($data['roles'])) {
-            foreach ($data['roles'] as $role) {
-                if (!in_array($role, Role::ROLES)) {
-                    throw new \Exception('Nieznana rola użytkownika.');
-                }
-            }
+            throw new \Exception('Nie znaleziono studenta.');
         }
 
         return $this->entityService->updateEntityWithFields($Student, $data);         
@@ -129,18 +144,18 @@ class StudentService
     // usunięcie użytkownika
     public function deleteStudent(int $id): void
     {
-        $Student = $this->findStudent($id);
-        if (!$Student) {
+        $student = $this->findStudent($id);
+        if (!$student) {
             throw new \Exception('Nie znaleziono użytkownika');
-        } 
+        }
 
-        $this->entityService->deleteEntity($Student);       
+        $user = $student->getUser();
+        if ($user) {
+            $this->entityService->delete($user);
+        }
+
+        $this->entityService->delete($student);
     }
-
-
-
-
-
 
 }
 

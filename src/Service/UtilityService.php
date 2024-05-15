@@ -28,8 +28,9 @@ class UtilityService
     {
         $links = [];
         foreach ($linksConfig as $linkName => $linkConfig) {
+            $paramValue = $linkConfig['value'] ?? $entity->getId();
             $links[$linkName] = [
-                'href' => $this->urlGenerator->generate($linkConfig['route'], [$linkConfig['param'] => $entity->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+                'href' => $this->urlGenerator->generate($linkConfig['route'], [$linkConfig['param'] => $paramValue], UrlGeneratorInterface::ABSOLUTE_URL),
                 'method' => $linkConfig['method']
             ];
         }

@@ -132,29 +132,6 @@ class EntityService
         }
     }
 
-    // public function updateField(Request $request, EntityFieldSetterService $fieldSetterService)
-    // {
-    //     $data = json_decode($request->getContent(), true);
-    //     $entityClass = $data['entityClass']; // Przykładowo: 'App\Entity\User'
-    //     $field = $data['field'];             // Przykładowo: 'username'
-    //     $value = $data['value'];             // Przykładowo: 'newUsername'
-    //     $id = $data['id'];                   // Id encji do zmiany
-
-    //     try {
-    //         $entity = $this->entityManager->getRepository($entityClass)->find($id);
-    //         if (!$entity) {
-    //             return new Response('Entity not found', Response::HTTP_NOT_FOUND);
-    //         }
-
-    //         $fieldSetterService->setFieldValue($entity, $field, $value);
-
-    //         return new Response('Field updated successfully', Response::HTTP_OK);
-    //     } catch (\Exception $e) {
-    //         return new Response('Error: ' . $e->getMessage(), Response::HTTP_BAD_REQUEST);
-    //     }
-    // }
-
-
 
     public function delete($entity)
     {
@@ -168,10 +145,6 @@ class EntityService
             throw new \Exception('Application error: ' . $e->getMessage());
         }
     }
-
-
-
-  
 
 
 }

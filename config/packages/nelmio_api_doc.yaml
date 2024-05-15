@@ -114,7 +114,34 @@ nelmio_api_doc:
                             example: "john.doe"
                         password:
                             type: string
-                            example: "password"                        
+                            example: "password"
+                NewTeacher:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            example: "John Doe"
+                        email:
+                            type: string
+                            example: "johndoe@example.com" 
+                        specialization:
+                            type: string
+                            example: "IT" 
+                        username:
+                            type: string
+                            example: "john.doe"
+                        password:
+                            type: string
+                            example: "password"    
+                EditStudent:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            example: "John Doe"
+                        email:
+                            type: string
+                            example: "johndoe@example.com"                                             
                 Course:
                     type: object
                     properties:
