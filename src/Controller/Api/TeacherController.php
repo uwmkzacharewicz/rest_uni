@@ -3,29 +3,17 @@
 namespace App\Controller\Api;
 
 use App\Entity\Teacher;
-use App\Entity\Student;
-use App\Entity\Course;
-use App\Entity\Enrollment;
-use App\Security\Role;
 use App\Service\UtilityService;
 use App\Service\TeacherService;
-
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use JMS\Serializer\SerializerBuilder;
 use JMS\Serializer\SerializerInterface;
-use Nelmio\ApiDocBundle\Annotation\Model;
-
-use Psr\Log\LoggerInterface;
 use OpenApi\Attributes as OA;
+
+use Nelmio\ApiDocBundle\Annotation\Model;
 
 
 #[OA\Tag(name: "Nauczyciele")]
@@ -55,7 +43,7 @@ class TeacherController extends AbstractController
     #[Route('/teachers', name: 'api_teachers', methods: ['GET'])]
     public function getTeachers() : Response
     {
-        $teachers = $this->teacherService->findAllStudents();
+        $teachers = $this->teacherService->findAllTeachers();
         $data = [];    
 
         foreach ($teachers as $teacher) {
@@ -109,7 +97,7 @@ class TeacherController extends AbstractController
         description: 'Not Found'
     )]   
     #[Route('/teachers/{id}', name: 'api_teachers_id', methods: ['GET'])]
-    public function getStudentById(int $id): Response
+    public function getTeacherById(int $id): Response
     {
         $teacher = $this->teacherService->findTeacher($id);
        
@@ -174,7 +162,7 @@ class TeacherController extends AbstractController
         content: new OA\JsonContent(ref: "#/components/schemas/NewTeacher")
     )] 
     #[Route('/teachers', name: 'api_teachers_add', methods: ['POST'])]
-    public function addStudent(Request $request): Response
+    public function addTeacher(Request $request): Response
     {
         try {
             // Pobranie i walidacja danych
@@ -186,8 +174,8 @@ class TeacherController extends AbstractController
 
        
         // Dodanie nowego nauczyciela
-        $newTeacher = $this->teacherService->createStudentWithPassword($data['name'], $data['email'], $data['username'], $data['password']);
-        $idUser = $updatedStudent->getUser() ? $updatedStudent->getUser()->getId() : null;
+        $newTeacher = $this->teacherService->createTeacherWithPassword($data['name'], $data['email'], $data['specialization'] ,$data['username'], $data['password']);
+        $idUser = $newTeacher->getUser() ? $newTeacher->getUser()->getId() : null;
 
         $data = [];
 
@@ -205,8 +193,8 @@ class TeacherController extends AbstractController
             ],
         ];
 
-        $teacherData = $newStudent->toArray();
-        $teacherData['_links'] = $this->utilityService->generateHateoasLinks($newStudent, $linksConfig);
+        $teacherData = $newTeacher->toArray();
+        $teacherData['_links'] = $this->utilityService->generateHateoasLinks($newTeacher, $linksConfig);
         $data[] = $teacherData;
 
         $jsonContent = $this->utilityService->serializeJson($data);
@@ -215,14 +203,14 @@ class TeacherController extends AbstractController
     }
 
     /**
-     * Edytuje lub tworzy nauczyciela.
+     * Edytuje nauczyciela.
      *
-     * Wywołanie pozwala na edycję nauczyciela o podanym identyfikatorze.
+     * Wywołanie pozwala na edycję danych nauczyciela.
      * 
      */
     #[OA\Response(
         response: 200,
-        description: 'Edytuje nauczyciela o podanym identyfikatorze',
+        description: 'Edytuje nauczyciela',
         content: new OA\JsonContent(
             type: 'array',
             items: new OA\Items(ref: new Model(type: Teacher::class))
@@ -231,26 +219,26 @@ class TeacherController extends AbstractController
     #[OA\Response(
         response: 400,
         description: 'Bad Request'
-    )]   
+    )]
     #[OA\RequestBody(
-        description: 'Dane nauczyciela do aktualizacji',
+        description: 'Dane nauczyciela do edycji',
         required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/EditStudent")
-    )] 
-    #[Route('/teachers/{id}', name: 'api_students_update', methods: ['PUT'])]
-    public function editStudent(int $id, Request $request): Response
+        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
+    )]
+    #[Route('/teachers/{id}', name: 'api_teachers_update', methods: ['PUT'])]
+    public function editTeacher(int $id, Request $request): Response
     {
-        try {
-            // Pobranie i walidacja danych
-            $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email']);
+
+        try{
+            //pobieranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email', 'specialization']);
         } catch (\Exception $e) {
-            // Obsługa wyjątków
             return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
         // Edycja nauczyciela
-        $editedStudent = $this->teacherService->editStudent($id, $data['name'], $data['email']);
-        $idUser = $updatedStudent->getUser() ? $updatedStudent->getUser()->getId() : null;
+        $editedTeacher = $this->teacherService->editTeacher($id, $data['name'], $data['email'], $data['specialization']);
+        $idUser = $editedTeacher->getUser() ? $editedTeacher->getUser()->getId() : null;
 
         $data = [];
 
@@ -268,24 +256,24 @@ class TeacherController extends AbstractController
             ],
         ];
 
-        $teacherData = $editedStudent->toArray();
-        $teacherData['_links'] = $this->utilityService->generateHateoasLinks($editedStudent, $linksConfig);
+        $teacherData = $editedTeacher->toArray();
+        $teacherData['_links'] = $this->utilityService->generateHateoasLinks($editedTeacher, $linksConfig);
         $data[] = $teacherData;
 
         $jsonContent = $this->utilityService->serializeJson($data);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+
     }
 
-
     /**
-     * Aktualizacja nauczyciela. PATCH
+     * Aktualizacja nauczyciela.
      *
-     * Wywołanie aktualizuje użytkownika o podanym id lub tworzy nowego użytkownika.
+     * Wywołanie pozwala na aktualizację wybranych pól nauczyciela.
      * 
      */
     #[OA\Response(
         response: 200,
-        description: 'Aktualizuje nauczyciela o podanym identyfikatorze',
+        description: 'Aktualizuje wybrane pola nauczyciela',
         content: new OA\JsonContent(
             type: 'array',
             items: new OA\Items(ref: new Model(type: Teacher::class))
@@ -296,12 +284,12 @@ class TeacherController extends AbstractController
         description: 'Bad Request'
     )]
     #[OA\RequestBody(
-        description: 'Dane nauczyciela do aktualizacji',
+        description: 'Dane do aktualizacji nauczyciela',
         required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/EditStudent")
+        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
     )]
-    #[Route('/teachers/{id}', name: 'api_students_patch', methods: ['PATCH'])]
-    public function updateStudent(int $id, Request $request): Response
+    #[Route('/teachers/{id}', name: 'api_teachers_patch', methods: ['PATCH'])]
+    public function updateTeacherFields(int $id, Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
@@ -309,8 +297,10 @@ class TeacherController extends AbstractController
         }
 
         try {
-            $updatedStudent = $this->teacherService->updateStudentFields($id, $data);
-            $idUser = $updatedStudent->getUser() ? $updatedStudent->getUser()->getId() : null;
+            $updatedTeacher = $this->teacherService->updateTeacherFields($id, $data);
+            $idUser = $updatedTeacher->getUser() ? $updatedTeacher->getUser()->getId() : null;
+
+            $data = [];
 
             $linksConfig = [
                 'self' => [
@@ -326,11 +316,11 @@ class TeacherController extends AbstractController
                 ],
             ];
 
-            $teacherData['student_info'] = $updatedStudent->toArray();
-            $teacherData['_links'] = $this->utilityService->generateHateoasLinks($updatedStudent, $linksConfig);
-            $status = ['status' => 'Zaktualizowano nauczyciela.' ];
+            $teacherData = $updatedTeacher->toArray();
+            $teacherData['_links'] = $this->utilityService->generateHateoasLinks($updatedTeacher, $linksConfig);
+            $status = ['status' => 'Zaktualizowano studenta.' ];
             $data = array_merge($status, $teacherData);
-            
+
             $jsonContent = $this->utilityService->serializeJson($data);
             return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
         
@@ -339,91 +329,33 @@ class TeacherController extends AbstractController
         }   
     }
 
-
-    /**
-     * Usuwa nauczyciela.
+     /**
+     * Usuwa nauczyciela
      *
      * Wywołanie pozwala na usunięcie nauczyciela o podanym identyfikatorze.
      * 
      */
+
     #[OA\Response(
         response: 204,
-        description: 'Usuwa nauczyciela o podanym identyfikatorze'
+        description: 'Usuwa nauczyciela'
     )]
     #[OA\Response(
         response: 404,
         description: 'Not Found'
     )]
-    #[Route('/teachers/{id}', name: 'api_students_delete', methods: ['DELETE'])]
-    public function deleteStudent(int $id): Response
-    {        
+    #[Route('/teachers/{id}', name: 'api_teachers_delete', methods: ['DELETE'])]
+    public function deleteTeacher(int $id): Response
+    {
         try {
-            $this->teacherService->deleteStudent($id);
+            $this->teacherService->deleteTeacher($id);
             return $this->json(['status' => 'Usunięto nauczyciela.'], Response::HTTP_OK);
-        } catch (\Exception $e) {           
+        } catch (\Exception $e) {
             return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
         }
     }
 
-    /**
-     * Wyświetla kursy nauczyciela.
-     *
-     * Wywołanie wyświetla kursy nauczyciela o podanym identyfikatorze.
-     * 
-     */
-        // /teachers/3001/courses
-    #[Route('/teachers/{id}/courses', name: 'api_students_courses', methods: ['GET'])]
-    #[OA\Tag(name: "Operacje na kursach")]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca listę kursów nauczyciela o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Course::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
-    public function getStudentCourses(int $id): Response
-    {
-        $teacher = $this->entityManager->getRepository(Teacher::class)->find($id);
-        
-        // Sprawdzenie, czy teacher został znaleziony
-        if (!$teacher) {
-            // Jeśli nie znaleziono nauczyciela, zwróć odpowiedź z błędem 404
-            return $this->json(['error' => 'Nie znaleziono nauczyciela o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
-        }
-        
-        //$courses = $teacher->getCourses();
-        $courses = $teacher->getEnrollments()->GetCourse()->find($id);
+    
 
-        
-        $data = [];
-
-        foreach ($courses as $course) {
-            $teacher = $course->getTeacher();
-            $data[] = [
-                'id' => $course->getId(),
-                'title' => $course->getTitle(),
-                'description' => $course->getDescription(),
-                'teacher' => [
-                    'id' => $teacher ? $teacher->getId() : null,
-                    'name' => $teacher ? $teacher->getName() : null,
-                    '_links' => ['self' => [
-                                'href' => $this->urlGenerator->generate('api_courses_id', ['id' => $teacher->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-                            ]
-                        ]       
-                ],
-                'capacity' => $course->getCapacity(),
-                'active' => $course->isActive()             
-            ];
-        }
-        
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-        return $this->json($data);
-    }
 
 }

@@ -71,7 +71,7 @@ class TeacherService
     }
 
     // dodanie nowego Teachera
-    public function createTeacherWithPassword(string $TeacherName, string $email, string $username, string $password): ?Teacher
+    public function createTeacherWithPassword(string $TeacherName, string $email, string $specialization ,string $username, string $password): ?Teacher
     {
          // Sprawdź, czy użytkownik o danym username już istnieje
          $existingUser = $this->entityService->findEntityByFiled(User::class, 'username', $username);
@@ -81,7 +81,7 @@ class TeacherService
  
         // Tworzenie instancji User
 
-        $newUser = $this->userService->addUser($username, $password, [Role::ROLE_Teacher]);
+        $newUser = $this->userService->addUser($username, $password, [Role::ROLE_TEACHER]);
         // Dodanie użytkownika za pomocą EntityService
         $userData = [
             'username' => $newUser->getUsername(),
@@ -93,6 +93,7 @@ class TeacherService
         $TeacherData = [
             'name' => $TeacherName,
             'email' => $email,
+            'specialization' => $specialization,
             'user' => $newUser
         ];
         $savedTeacher = $this->entityService->addEntity(Teacher::class, $TeacherData);
@@ -114,47 +115,57 @@ class TeacherService
     }
 
     // edycja użytkownika
-    public function editTeacher(int $id, string $TeacherName, string $email): ?Teacher
+    public function editTeacher(int $id, string $teacherName, string $email): ?Teacher
     {
-        $Teacher = $this->findTeacher($id);
-        if (!$Teacher) {
+        $teacher = $this->findTeacher($id);
+        if (!$teacher) {
             throw new \Exception('Teacher not found');
         }
-        $Teacher->setName($TeacherName);
-        $Teacher->setEmail($email);
-        $this->entityService->updateEntity($Teacher);
+        $teacher->setName($teacherName);
+        $teacher->setEmail($email);
+        $this->entityService->updateEntity($teacher);
 
-        return $Teacher;
+        return $teacher;
     }
 
     
-    // AKtualizacja użytkownika
+    // AKtualizacja 
     public function updateTeacherFields(int $id, array $data): Teacher
     {
 
-        $Teacher = $this->entityService->find(Teacher::class, $id);
-        if (!$Teacher) {
-            throw new \Exception('Nie znaleziono Teachera.');
+        $teacher = $this->entityService->find(Teacher::class, $id);
+        if (!$teacher) {
+            throw new \Exception('Nie znaleziono nauczyciela.');
         }
 
-        return $this->entityService->updateEntityWithFields($Teacher, $data);         
+        return $this->entityService->updateEntityWithFields($teacher, $data);         
     }
 
 
-    // usunięcie użytkownika
-    public function deleteTeacher(int $id): void
-    {
-        $Teacher = $this->findTeacher($id);
-        if (!$Teacher) {
-            throw new \Exception('Nie znaleziono użytkownika');
-        }
-
-        $user = $Teacher->getUser();
+     // usunięcie użytkownika
+     public function deleteTeacher(int $id): void
+     {
+         $teacher = $this->findTeacher($id);
+         if (!$teacher) {
+             throw new \Exception('Nie znaleziono użytkownika');
+         }
+ 
+         $user = $teacher->getUser();       
+         
+         // Usuń referencję do użytkownika w obiekcie nauczyciela
         if ($user) {
-            $this->entityService->delete($user);
+            $teacher->setUser(null);
+            $this->entityManager->persist($teacher);
+            $this->entityManager->flush(); // Zapisz zmiany, aby usunięcie referencji miało efekt
         }
 
-        $this->entityService->delete($Teacher);
-    }
+        $this->entityService->delete($teacher);
+
+         
+         if ($user) {
+             $this->entityService->delete($user);
+         }
+        
+     }
 
 }

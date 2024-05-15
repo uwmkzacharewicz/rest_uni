@@ -128,16 +128,16 @@ class StudentService
     }
 
     
-    // AKtualizacja użytkownika
+    // AKtualizacja 
     public function updateStudentFields(int $id, array $data): Student
     {
 
-        $Student = $this->entityService->find(Student::class, $id);
-        if (!$Student) {
+        $student = $this->entityService->find(Student::class, $id);
+        if (!$student) {
             throw new \Exception('Nie znaleziono studenta.');
         }
 
-        return $this->entityService->updateEntityWithFields($Student, $data);         
+        return $this->entityService->updateEntityWithFields($student, $data);         
     }
 
 

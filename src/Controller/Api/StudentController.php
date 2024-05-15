@@ -3,29 +3,18 @@
 namespace App\Controller\Api;
 
 use App\Entity\Student;
-use App\Entity\Teacher;
-use App\Entity\Course;
-use App\Entity\Enrollment;
-use App\Security\Role;
 use App\Service\UtilityService;
 use App\Service\StudentService;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use JMS\Serializer\SerializerBuilder;
 use JMS\Serializer\SerializerInterface;
-use Nelmio\ApiDocBundle\Annotation\Model;
-
-use Psr\Log\LoggerInterface;
 use OpenApi\Attributes as OA;
+
+use Nelmio\ApiDocBundle\Annotation\Model;
 
 
 #[OA\Tag(name: "Studenci")]
@@ -74,9 +63,10 @@ class StudentController extends AbstractController
                     'value' => $idUser
                 ],
                 'allCourses' => [
-                    'route' => 'api_students_login',
+                    'route' => 'api_users_id',
                     'param' => 'id',
-                    'method' => 'GET'
+                    'method' => 'GET',
+                    'value' => $idUser
                 ]
             ];
             $studentData = $student->toArray();
@@ -134,13 +124,14 @@ class StudentController extends AbstractController
                 'value' => $idUser
             ],
             'allCourses' => [
-                'route' => 'api_students_login',
+                'route' => 'api_users_id',
                 'param' => 'id',
-                'method' => 'GET'
+                'method' => 'GET',
+                'value' => $idUser
         ] ];
 
         $data = $student->toArray();
-        $data['user'] = $student->getUser() ? $student->getUser()->toArray() : null;
+        //$data['user'] = $student->getUser() ? $student->getUser()->toArray() : null;
         $data['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);
         
         $jsonContent = $this->utilityService->serializeJson($data);
@@ -185,7 +176,7 @@ class StudentController extends AbstractController
        
         // Dodanie nowego studenta
         $newStudent = $this->studentService->createStudentWithPassword($data['name'], $data['email'], $data['username'], $data['password']);
-        $idUser = $updatedStudent->getUser() ? $updatedStudent->getUser()->getId() : null;
+        $idUser = $newStudent->getUser() ? $newStudent->getUser()->getId() : null;
 
         $data = [];
 
@@ -248,7 +239,7 @@ class StudentController extends AbstractController
 
         // Edycja studenta
         $editedStudent = $this->studentService->editStudent($id, $data['name'], $data['email']);
-        $idUser = $updatedStudent->getUser() ? $updatedStudent->getUser()->getId() : null;
+        $idUser = $editedStudent->getUser() ? $editedStudent->getUser()->getId() : null;
 
         $data = [];
 

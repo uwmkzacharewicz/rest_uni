@@ -124,15 +124,5 @@ class Student
         ];
     }
 
-    public function generateHateoasLinks($entity, array $linksConfig, UrlGeneratorInterface $urlGenerator)
-    {
-    $links = [];
-    foreach ($linksConfig as $linkName => $linkConfig) {
-        $links[$linkName] = [
-            'href' => $urlGenerator->generate($linkConfig['route'], [$linkConfig['param'] => $entity->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            'method' => $linkConfig['method']
-        ];
-    }
-    return $links;
-    }
+   
 }
