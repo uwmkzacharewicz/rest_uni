@@ -3,6 +3,7 @@ namespace App\Service;
 
 use App\Entity\Student;
 use App\Entity\User;
+use App\Entity\Course;
 use App\Security\Role;
 use App\Service\EntityService;
 use App\Service\UserService;
@@ -111,6 +112,25 @@ class StudentService
         $savedStudent = $this->entityService->addEntity(Student::class, $studentData);
 
         return $savedStudent;
+    }
+
+     /**
+     * Znajdź aktywne kursy z wolnymi miejscami
+     *
+     * @return Course[]
+     */
+    public function findActiveCoursesWithFreeSpots(): array
+    {
+        $courses = $this->entityService->findAll(Course::class);
+        $availableCourses = [];
+
+        foreach ($courses as $course) {
+            if ($course->isActive() && count($course->getEnrollments()) < $course->getCapacity()) {
+                $availableCourses[] = $course;
+            }
+        }
+
+        return $availableCourses;
     }
 
     // edycja użytkownika

@@ -130,6 +130,17 @@ class StudentController extends AbstractController
                 'value' => $idUser
         ] ];
 
+        // Dodajemy kursy, na które student może się zapisać
+        $availableCourses = $this->studentService->findActiveCoursesWithFreeSpots();
+        foreach ($availableCourses as $course) {
+            $linksConfig['course_' . $course->getId()] = [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $course->getId()
+            ];
+        }
+
         $data = $student->toArray();
         //$data['user'] = $student->getUser() ? $student->getUser()->toArray() : null;
         $data['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);

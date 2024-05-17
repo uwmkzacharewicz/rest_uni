@@ -167,7 +167,7 @@ class EnrollmentController extends AbstractController
         try {
             // Dodanie nowego zapisu
             $newEnrollment = $this->enrollmentService->createEnrollment($data['studentId'], $data['courseId']);
-        } catch (StudentNotFoundException | CourseNotFoundException | CourseNotActiveException | CourseFullException $e) {
+        } catch (StudentNotFoundException | StudentAlreadyEnrolledException | CourseNotFoundException | CourseNotActiveException | CourseFullException $e) {
             return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_CONFLICT);
         }
 
@@ -203,7 +203,7 @@ class EnrollmentController extends AbstractController
     // Wystaw Ocenę
     #[OA\Response(response: 200, description: 'Oceniono zapis na kurs')]
     #[OA\Response(response: 400, description: 'Bad Request')]
-    #[Route('/enrollments/{id}/grade', name: 'api_enrollments_grade', methods: ['POST'])]
+    #[Route('/enrollments/{id}/grade', name: 'api_enrollments_grade', methods: ['PATCH'])]
     public function gradeEnrollment(int $id, Request $request): Response
     {
         try {
