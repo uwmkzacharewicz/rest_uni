@@ -120,9 +120,13 @@ class StudentService
         if (!$student) {
             throw new \Exception('Student not found');
         }
-        $student->setName($studentName);
-        $student->setEmail($email);
-        $this->entityService->updateEntity($student);
+
+        $studentData = [
+            'name' => $studentName,
+            'email' => $email,
+        ];
+
+        $this->entityService->updateEntityWithFields($student, $studentData);
 
         return $student;
     }
@@ -151,10 +155,10 @@ class StudentService
 
         $user = $student->getUser();
         if ($user) {
-            $this->entityService->delete($user);
+            $this->entityService->deleteEntiy($user);
         }
 
-        $this->entityService->delete($student);
+        $this->entityService->deleteEntiy($student);
     }
 
 }

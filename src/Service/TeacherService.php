@@ -121,9 +121,13 @@ class TeacherService
         if (!$teacher) {
             throw new \Exception('Teacher not found');
         }
-        $teacher->setName($teacherName);
-        $teacher->setEmail($email);
-        $this->entityService->updateEntity($teacher);
+
+        $teacherData = [
+            'name' => $teacherName,
+            'email' => $email,
+        ];
+
+        $teacher = $this->entityService->updateEntityWithFields($teacher, $teacherData);
 
         return $teacher;
     }
@@ -133,7 +137,8 @@ class TeacherService
     public function updateTeacherFields(int $id, array $data): Teacher
     {
 
-        $teacher = $this->entityService->find(Teacher::class, $id);
+        //$teacher = $this->entityService->find(Teacher::class, $id);
+        $teacher = $this->findTeacher($id);
         if (!$teacher) {
             throw new \Exception('Nie znaleziono nauczyciela.');
         }
@@ -159,11 +164,11 @@ class TeacherService
             $this->entityManager->flush(); // Zapisz zmiany, aby usunięcie referencji miało efekt
         }
 
-        $this->entityService->delete($teacher);
+        $this->entityService->deleteEntiy($teacher);
 
          
          if ($user) {
-             $this->entityService->delete($user);
+             $this->entityService->deleteEntiy($user);
          }
         
      }

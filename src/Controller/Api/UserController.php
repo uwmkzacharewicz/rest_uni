@@ -179,13 +179,13 @@ class UserController extends AbstractController
      * Wywołanie aktualizuje użytkownika o podanym id lub tworzy nowego użytkownika.
      * 
      */
-    #[Route('/users/{id}', name: 'api_users_update', methods: ['PUT'])]
+    #[Route('/users/{id}', name: 'api_users_edit', methods: ['PUT'])]
     
     #[OA\RequestBody(description: 'Dane użytkownika do aktualizacji', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewUser"))] 
     #[OA\Response(response: 200, ref: '#/components/responses/UserList200' )]
     #[OA\Response(response: 404, ref: '#/components/responses/NotFound404'
     )]
-    public function updateUser(Request $request, int $id): Response
+    public function editUser(Request $request, int $id): Response
     {
         try {
             // Pobranie i walidacja danych
@@ -210,7 +210,7 @@ class UserController extends AbstractController
      * Wywołanie aktualizuje użytkownika o podanym id.
      * 
      */
-    #[Route('/users/{id}', name: 'api_users_patch', methods: ['PATCH'])]
+    #[Route('/users/{id}', name: 'api_users_update', methods: ['PATCH'])]
     #[OA\RequestBody(
         description: 'Dane użytkownika do aktualizacji',
         required: true,
@@ -218,7 +218,7 @@ class UserController extends AbstractController
     )]
     #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
     #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
-    public function patchUser(Request $request, int $id): Response
+    public function updateUser(Request $request, int $id): Response
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {

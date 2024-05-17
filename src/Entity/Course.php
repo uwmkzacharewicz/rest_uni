@@ -149,6 +149,7 @@ class Course
         return [
             'id' => $this->getId(),
             'title' => $this->getTitle(),
+            'teacher' => $this->getTeacher()->getName(),
             'description' => $this->getDescription(),
             'capacity' => $this->getCapacity(),
             'active' => $this->isActive(),

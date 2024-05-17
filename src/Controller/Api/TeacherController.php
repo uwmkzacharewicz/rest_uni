@@ -5,6 +5,7 @@ namespace App\Controller\Api;
 use App\Entity\Teacher;
 use App\Service\UtilityService;
 use App\Service\TeacherService;
+
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -12,7 +13,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use JMS\Serializer\SerializerInterface;
 use OpenApi\Attributes as OA;
-
 use Nelmio\ApiDocBundle\Annotation\Model;
 
 
@@ -84,14 +84,7 @@ class TeacherController extends AbstractController
      * Wywołanie wyświetla szczegóły nauczyciela o podanym identyfikatorze.
      * 
      */     
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca nauczyciela o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Teacher::class))
-        ))
-    ]
+   
     #[OA\Response(
         response: 404,
         description: 'Not Found'
@@ -144,23 +137,12 @@ class TeacherController extends AbstractController
      * Wywołanie dodaje nowego nauczyciela na podstawie przekazanych danych.
      * 
      */ 
-    #[OA\Response(
-        response: 201,
-        description: 'Dodaje nauczyciela',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Teacher::class))
-        ))
-    ]
+
     #[OA\Response(
         response: 400,
         description: 'Bad Request'
     )]
-    #[OA\RequestBody(
-        description: 'Dane nowego nauczyciela',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/NewTeacher")
-    )] 
+    
     #[Route('/teachers', name: 'api_teachers_add', methods: ['POST'])]
     public function addTeacher(Request $request): Response
     {
@@ -208,24 +190,12 @@ class TeacherController extends AbstractController
      * Wywołanie pozwala na edycję danych nauczyciela.
      * 
      */
-    #[OA\Response(
-        response: 200,
-        description: 'Edytuje nauczyciela',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Teacher::class))
-        ))
-    ]
+
     #[OA\Response(
         response: 400,
         description: 'Bad Request'
-    )]
-    #[OA\RequestBody(
-        description: 'Dane nauczyciela do edycji',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
-    )]
-    #[Route('/teachers/{id}', name: 'api_teachers_update', methods: ['PUT'])]
+    )]   
+    #[Route('/teachers/{id}', name: 'api_teachers_edit', methods: ['PUT'])]
     public function editTeacher(int $id, Request $request): Response
     {
 
@@ -272,23 +242,11 @@ class TeacherController extends AbstractController
      * 
      */
     #[OA\Response(
-        response: 200,
-        description: 'Aktualizuje wybrane pola nauczyciela',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Teacher::class))
-        ))
-    ]
-    #[OA\Response(
         response: 400,
         description: 'Bad Request'
     )]
-    #[OA\RequestBody(
-        description: 'Dane do aktualizacji nauczyciela',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
-    )]
-    #[Route('/teachers/{id}', name: 'api_teachers_patch', methods: ['PATCH'])]
+
+    #[Route('/teachers/{id}', name: 'api_teachers_update', methods: ['PATCH'])]
     public function updateTeacherFields(int $id, Request $request): Response
     {
         $data = json_decode($request->getContent(), true);

@@ -6,6 +6,7 @@ use App\Entity\Teacher;
 use App\Entity\Course;
 use App\Entity\Enrollment;
 use App\Entity\User;
+
 use App\Security\Role;
 
 use Doctrine\ORM\EntityManagerInterface;
@@ -36,6 +37,11 @@ class EntityService
     public function findEntityByFiled(string $entityClass, string $field, $value)
     {
         return $this->entityManager->getRepository($entityClass)->findOneBy([$field => $value]);
+    }
+
+    public function findEntitiesByField(string $entityClass, string $field, $value): array
+    {
+        return $this->entityManager->getRepository($entityClass)->findBy([$field => $value]);
     }
 
     public function setFieldValue($entity, string $field, $value)
@@ -133,7 +139,7 @@ class EntityService
     }
 
 
-    public function delete($entity)
+    public function deleteEntiy($entity)
     {
         $this->entityManager->beginTransaction();
         try {

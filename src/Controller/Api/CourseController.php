@@ -2,260 +2,296 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Student;
-use App\Entity\Teacher;
 use App\Entity\Course;
-use App\Entity\Enrollment;
-use App\Security\Role;
-use App\Service\EntityService;
+use App\Service\CourseService;
+use App\Service\UtilityService;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Doctrine\Persistence\ManagerRegistry;
-use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\HttpException;
-
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-use JMS\Serializer\SerializerBuilder;
 use JMS\Serializer\SerializerInterface;
-use Nelmio\ApiDocBundle\Annotation\Model;
-use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
-use Doctrine\ORM\QueryBuilder;
-
-use Psr\Log\LoggerInterface;
 use OpenApi\Attributes as OA;
+use Nelmio\ApiDocBundle\Annotation\Model;
 
+#[OA\Tag(name: "Kursy")]
 #[Route("/api", "")]
 class CourseController extends AbstractController
 {
-    private $urlGenerator;
     private $serializer;
-    private $entityService;
+    private $courseService;
+    private $utilityService;
 
-    public function __construct(EntityService $entityService, UrlGeneratorInterface $urlGenerator, SerializerInterface $serializer) {
+    public function __construct(CourseService $courseService, SerializerInterface $serializer, UtilityService $utilityService) {
 
-            $this->entityService = $entityService;
-            $this->urlGenerator = $urlGenerator;
+            $this->courseService = $courseService;
             $this->serializer = $serializer;
+            $this->utilityService = $utilityService;
     }
 
-
-    #[Route('/test/{id}', name: 'api_test', methods: ['GET'])]
-    public function test(int $id) : Response
-    {
-        $course = $this->entityManager->getRepository(Course::class)->find($id);
-        
-        
-        if (!$course) {
-            return new JsonResponse(['message' => 'Course not found'], 404);
-        }
-        
-        $teacher = $course->getTeacher();
-     
-        $data = $course->toArray();
-        $data['teacher'] = $teacher ? $teacher->toArray() : null;
-        $data['teacher']['_links'] = ['self' => [
-                'href' => $this->urlGenerator->generate('api_teachers_id', ['id' => $teacher->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-                ]];
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-    }
-
-
-
-    
     /**
      * Wyświetla listę kursów.
      *
-     * Wywołanie wyświetla wszystkie kursy wraz z ich linkiem do szczegółów.
+     * Wywołanie wyświetla wszystkie kursy
      * 
      */
-    #[OA\Tag(name: "Operacje na kursach")]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca listę kursów',
-        content: new OA\JsonContent(ref: "#/components/schemas/Course")
-    )]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
-
+    #[OA\Response(response: 200, description: 'Zwraca listę kursów')]
+    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses', name: 'api_courses', methods: ['GET'])]
-    public function getCourses(
-        #[MapQueryParameter] int $page,
-        #[MapQueryParameter] int $limit
-    ) : Response
-    {  
-        
-        $query = $this->entityManager->getRepository(Course::class)
-                ->createQueryBuilder('c')
-                ->getQuery(); 
-                
-        $paginator = new Doctrine\ORM\Tools\Pagination\Paginator($query);
-        $paginator->getQuery()
-                    ->setFirstResult($limit * ($page - 1)) // Przesunięcie zależne od numeru strony
-                    ->setMaxResults($limit); // Maksymalna liczba wyników
-
-
-                    $courses = [];
-                    foreach ($paginator as $course) {
-                        $teacher = $course->getTeacher();
-                        $courses[] = [
-                            'id' => $course->getId(),
-                            'title' => $course->getTitle(),
-                            'description' => $course->getDescription(),
-                            'teacher' => $teacher ? [
-                                'id' => $teacher->getId(),
-                                'name' => $teacher->getName(),
-                            ] : null,
-                            'capacity' => $course->getCapacity(),
-                            'active' => $course->isActive(),
-                        ];
-                    }
-                
-                    $jsonContent = $this->serializer->serialize([
-                        'data' => $courses,
-                        'current_page' => $page,
-                        'items_per_page' => $limit,
-                        'total_items' => count($paginator),
-                    ], 'json');
-                
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);           
-
-        // $courses = $this->entityManager->getRepository(Course::class)->findAll();       
-        // $data = [];
-        
-        // foreach ($courses as $course) {
-        //     $teacher = $course->getTeacher();
-        //     $data[] = [                
-        //         'id' => $course->getId(),
-        //         'title' => $course->getTitle(),
-        //         'description' => $course->getDescription(),
-        //         'teacher' => [
-        //             'id' => $teacher ? $teacher->getId() : null,
-        //             'name' => $teacher ? $teacher->getName() : null,
-        //             '_links' => ['self' => [
-        //                         'href' => $this->urlGenerator->generate('api_students_id', ['id' => $teacher->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-        //                     ]
-        //                 ]       
-        //         ],
-        //         'capacity' => $course->getCapacity(),
-        //         'active' => $course->isActive()             
-        //     ];
-        // }
-    
-        //$jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        //return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-    }
-    
-    /**
-     * Wyświetla kurs.
-     *
-     * Wywołanie wyświetla kurs wraz z jego linkiem do szczegółów.
-     * 
-     */
-    #[OA\Tag(name: "Operacje na kursach")]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca kursów o podanym identyfikatorze',
-        content: new OA\JsonContent(ref: "#/components/schemas/Course")
-    )]
-    #[Route('/courses/{id}', name: 'api_courses_id', methods: ['GET'])]
-    public function getCourse(int $id) : Response
+    public function getCourses(Request $request): Response
     {
-        $course = $this->entityManager->getRepository(Course::class)->find($id);
-        
-        if (!$course) {
-            return new JsonResponse(['message' => 'Course not found'], 404);
-        }
-        
-        $teacher = $course->getTeacher();
-        $data = [
-            'id' => $course->getId(),
-            'title' => $course->getTitle(),
-            'description' => $course->getDescription(),
-            'teacher' => [
-                'id' => $teacher ? $teacher->getId() : null,
-                'name' => $teacher ? $teacher->getName() : null,
-                '_links' => ['self' => [
-                            'href' => $this->urlGenerator->generate('api_teachers_id', ['id' => $teacher->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-                        ]
-                    ]       
-            ],
-            'capacity' => $course->getCapacity(),
-            'active' => $course->isActive()             
-        ];
-        
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
-    }
-    
+        $teacherId = $request->query->get('teacherId');
 
+        if ($teacherId !== null) {
+            try {
+                $courses = $this->courseService->findCoursesByTeacherId((int)$teacherId);
+            } catch (\Exception $e) {
+                return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
+            }
+        } else {
+            $courses = $this->courseService->findAllCourses();
+        }
+
+        // Sprawdzenie, czy kursy zostały znalezione
+        if (!$courses) {
+            return $this->json(['error' => 'Nie znaleziono żadnego kursu'], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $data = [];
+
+        foreach ($courses as $course ) {
+            $idTeacher = $course->getTeacher()->getId();
+            $linksConfig = [
+                'self' => [
+                    'route' => 'api_courses_id',
+                    'param' => 'id',
+                    'method' => 'GET'
+                ],
+                'teacherData' => [
+                    'route' => 'api_teachers_id',
+                    'param' => 'id',
+                    'method' => 'GET',
+                    'value' => $idTeacher
+                ]
+            ];
+
+            $courseData = $course->toArray();
+            $courseData['_links'] = $this->utilityService->generateHateoasLinks($course, $linksConfig);
+
+            $data[] = $courseData;
+
+        }
+
+        $jsonContent = $this->utilityService->serializeJson($data);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);        
+    }
 
     /**
-     * Dodaje kurs.
+     * Wyświetla kurs o podanym id.
      *
-     * Wywołanie dodaje nowy kurs.
+     * Wywołanie wyświetla kurs o podanym id
      * 
      */
-    #[OA\Tag(name: "Operacje na kursach")]
-    #[OA\Response(
-        response: 201,
-        description: 'Dodaje kurs',
-        content: new OA\JsonContent(ref: "#/components/schemas/Course")
-    )]
-    #[OA\RequestBody(
-        description: 'Dane kursu',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/NewCourse")
-    )]
+    #[OA\Response(response: 200, description: 'Zwraca kurs o podanym id')]
+    #[OA\Response(response: 404, description: 'Not Found')]
+    #[Route('/courses/{id}', name: 'api_courses_id', methods: ['GET'])]
+    public function getCourseById(int $id): Response
+    {
+        $course = $this->courseService->findCourse($id);
+         // Sprawdzenie, czy teacher został znaleziony
+         if (!$course) {
+            // Jeśli nie znaleziono nauczyciela, zwróć odpowiedź z błędem 404
+            return $this->json(['error' => 'Nie znaleziono kursu o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
+        }
+
+        $data = [];
+        $idTeacher = $course->getTeacher()->getId();
+        
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'teacherData' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $idTeacher
+            ]
+        ];
+
+        $courseData = $course->toArray();
+        $courseData['_links'] = $this->utilityService->generateHateoasLinks($course, $linksConfig);
+
+        $jsonContent = $this->utilityService->serializeJson($courseData);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);        
+    }
+
+    /**
+     * Dodaje nowy kurs.
+     *
+     * Wywołanie dodaje nowy kurs
+     * 
+     */
+    #[OA\Response(response: 201, description: 'Dodaje nowy kurs')]
+    #[OA\Response(response: 400, description: 'Bad Request')]
     #[Route('/courses', name: 'api_courses_add', methods: ['POST'])]
-    public function addCourse(Request $request) : Response
+    public function addCourse(Request $request): Response
+    {
+        try {
+            //Pobieranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, 
+                                                                        ['title', 
+                                                                        'description', 
+                                                                        'teacherId',
+                                                                        'capacity', 
+                                                                        'active']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Dodanie nwoego kursu
+        $newCourse = $this->courseService->createCourse($data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        $idTeacher = $newCourse->getTeacher()->getId();
+
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'teacherData' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $idTeacher
+            ]
+        ];
+
+        $courseData = $newCourse->toArray();
+        $courseData['_links'] = $this->utilityService->generateHateoasLinks($newCourse, $linksConfig);
+
+        $jsonContent = $this->utilityService->serializeJson($courseData);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+    }
+
+    /**
+     * Edytuje kurs o podanym id.
+     *
+     * Wywołanie edycji kursu o podanym id
+     * 
+     */
+    #[OA\Response(response: 200, description: 'Aktualizuje kurs o podanym id')]
+    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\Response(response: 404, description: 'Not Found')]
+    #[Route('/courses/{id}', name: 'api_courses_edit', methods: ['PUT'])]
+    public function editCourse(int $id, Request $request): Response
+    {
+        try{
+            //pobieranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, ['title', 'description', 'teacherId', 'capacity', 'active']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        // Edycja kursu
+        $editedCourse = $this->courseService->editCourse($id, $data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        $idTeacher = $editedCourse->getTeacher()->getId();
+
+        $data = [];
+
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'teacherData' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $idTeacher
+            ]
+        ];
+
+        $courseData = $editedCourse->toArray();
+        $courseData['_links'] = $this->utilityService->generateHateoasLinks($editedCourse, $linksConfig);
+
+        $jsonContent = $this->utilityService->serializeJson($courseData);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+    }
+
+    /** Aktualizacja kursu o podanym id 
+     * 
+     * Wywołanie aktualizuje kurs o podanym id
+     * 
+    */
+    #[OA\Response(response: 200, description: 'Aktualizuje kurs o podanym id')]
+    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\Response(response: 404, description: 'Not Found')]
+    #[Route('/courses/{id}', name: 'api_courses_update', methods: ['PATCH'])]
+    public function patchCourse(int $id, Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
-
-        if (empty($data['title']) || empty($data['description']) || empty($data['teacher_id']) || !isset($data['capacity']) || !isset($data['active'])) {
-            return $this->json(['error' => 'Missing data'], Response::HTTP_BAD_REQUEST);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
 
-        $teacher = $entityService->findTeacher($data['teacher_id']);       
-        if (!$teacher) {
-             return $this->json(['error' => 'Teacher not found'], Response::HTTP_NOT_FOUND);
+
+        try {
+            $updatedCourse = $this->courseService->updateCourseFields($id, $data);
+            $idTeacher = $updatedCourse->getTeacher()->getId();
+
+            $data = [];
+
+            $linksConfig = [
+                'self' => [
+                    'route' => 'api_courses_id',
+                    'param' => 'id',
+                    'method' => 'GET'
+                ],
+                'teacherData' => [
+                    'route' => 'api_teachers_id',
+                    'param' => 'id',
+                    'method' => 'GET',
+                    'value' => $idTeacher
+                ]
+            ];
+    
+            $courseData = $updatedCourse->toArray();
+            $courseData['_links'] = $this->utilityService->generateHateoasLinks($updatedCourse, $linksConfig);
+    
+            $jsonContent = $this->utilityService->serializeJson($courseData);
+            return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+
+
+
+
+        } catch (\Exception $e) {           
+            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
         }
 
-        $course = new Course();
-        $course->setTitle($data['title']);
-        $course->setDescription($data['description']);
-        $course->setCapacity($data['capacity']);
-        $course->setActive($data['active']);
-        
-        $teacher = $this->entityManager->getRepository(Teacher::class)->find($data['teacher_id']);
-        $course->setTeacher($teacher);
-        
-        $this->entityManager->persist($course);
-        $this->entityManager->flush();
-        
-        $data = [
-            'id' => $course->getId(),
-            'title' => $course->getTitle(),
-            'description' => $course->getDescription(),
-            'teacher' => [
-                'id' => $teacher ? $teacher->getId() : null,
-                'name' => $teacher ? $teacher->getName() : null,
-                '_links' => ['self' => [
-                            'href' => $this->urlGenerator->generate('api_teachers_id', ['id' => $teacher->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
-                        ]
-                    ]       
-            ],
-            'capacity' => $course->getCapacity(),
-            'active' => $course->isActive()             
-        ];
-        
-        $jsonContent = $this->serializer->serialize($data, 'json', \JMS\Serializer\SerializationContext::create()->setSerializeNull(true));
-        return new Response($jsonContent, 201, ['Content-Type' => 'application/json']);
     }
+
+    /**
+     * Usuwa kurs o podanym id.
+     *
+     * Wywołanie usuwa kurs o podanym id
+     * 
+     */
+    #[OA\Response(response: 200, description: 'Usuwa kurs o podanym id')]
+    #[OA\Response(response: 404, description: 'Not Found')]
+    #[Route('/courses/{id}', name: 'api_courses_delete', methods: ['DELETE'])]
+    public function deleteCourse(int $id): Response
+    {
+        try {
+            $this->courseService->deleteCourse($id);
+            return $this->json(['message' => 'Kurs został usunięty'], JsonResponse::HTTP_OK);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
+        }
+    }
+
 }

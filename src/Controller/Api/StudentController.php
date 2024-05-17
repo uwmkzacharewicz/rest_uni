@@ -226,7 +226,7 @@ class StudentController extends AbstractController
         required: true,
         content: new OA\JsonContent(ref: "#/components/schemas/EditStudent")
     )] 
-    #[Route('/students/{id}', name: 'api_students_update', methods: ['PUT'])]
+    #[Route('/students/{id}', name: 'api_students_edit', methods: ['PUT'])]
     public function editStudent(int $id, Request $request): Response
     {
         try {
@@ -289,7 +289,7 @@ class StudentController extends AbstractController
         required: true,
         content: new OA\JsonContent(ref: "#/components/schemas/EditStudent")
     )]
-    #[Route('/students/{id}', name: 'api_students_patch', methods: ['PATCH'])]
+    #[Route('/students/{id}', name: 'api_students_update', methods: ['PATCH'])]
     public function updateStudent(int $id, Request $request): Response
     {
         $data = json_decode($request->getContent(), true);
