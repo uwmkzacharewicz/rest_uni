@@ -34,7 +34,7 @@ class EntityService
         return $this->entityManager->getRepository($entityClass)->find($id);
     }
 
-    public function findEntityByFiled(string $entityClass, string $field, $value)
+    public function findEntityByField(string $entityClass, string $field, $value)
     {
         return $this->entityManager->getRepository($entityClass)->findOneBy([$field => $value]);
     }
@@ -42,6 +42,11 @@ class EntityService
     public function findEntitiesByField(string $entityClass, string $field, $value): array
     {
         return $this->entityManager->getRepository($entityClass)->findBy([$field => $value]);
+    }
+
+    public function findEntityByFields(string $entityClass, array $fields)
+    {
+        return $this->entityManager->getRepository($entityClass)->findOneBy($fields);
     }
 
     public function setFieldValue($entity, string $field, $value)

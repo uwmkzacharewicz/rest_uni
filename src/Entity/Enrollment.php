@@ -72,4 +72,23 @@ class Enrollment
 
         return $this;
     }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'student' => $this->getStudent()->getName(),
+            'course' => $this->getCourse()->getTitle(),
+            'grade' => $this->getGrade()
+        ];
+    }
+
+
+
+    public function __toString(): string
+    {
+        return $this->student->getStudentname() . ' - ' . $this->course->getCourseName();
+    }
+
+
 }
