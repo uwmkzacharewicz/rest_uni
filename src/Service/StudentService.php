@@ -4,6 +4,7 @@ namespace App\Service;
 use App\Entity\Student;
 use App\Entity\User;
 use App\Entity\Course;
+use App\Entity\Enrollment;
 use App\Security\Role;
 use App\Service\EntityService;
 use App\Service\UserService;
@@ -114,6 +115,22 @@ class StudentService
         return $savedStudent;
     }
 
+    public function findEnrolledCourses(int $studentId): array
+    {
+        $student = $this->findStudent($studentId);
+        if (!$student) {
+            throw new \Exception('Student not found');
+        }
+
+        $enrollments = $student->getEnrollments();
+        $courses = [];
+        foreach ($enrollments as $enrollment) {
+            $courses[] = $enrollment->getCourse();
+        }
+
+        return $courses;
+    }
+
      /**
      * Znajdź aktywne kursy z wolnymi miejscami
      *
@@ -131,6 +148,19 @@ class StudentService
         }
 
         return $availableCourses;
+    }
+
+    /**
+     * Znajdź Enrollment po id studenta i id kursu
+     *
+     * @return Enrollment|null
+     */
+    public function findEnrollment(int $studentId, int $courseId): ?Enrollment
+    {
+        return $this->entityService->findEntityByFields(Enrollment::class, [
+            'student' => $studentId,
+            'course' => $courseId
+        ]);
     }
 
     // edycja użytkownika

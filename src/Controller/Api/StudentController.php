@@ -3,6 +3,8 @@
 namespace App\Controller\Api;
 
 use App\Entity\Student;
+use App\Entity\Course;
+use App\Entity\Enrollment;
 use App\Service\UtilityService;
 use App\Service\StudentService;
 
@@ -123,26 +125,55 @@ class StudentController extends AbstractController
                 'method' => 'GET',
                 'value' => $idUser
             ],
-            'allCourses' => [
-                'route' => 'api_users_id',
-                'param' => 'id',
-                'method' => 'GET',
-                'value' => $idUser
-        ] ];
+            'allCourses' => [],
+            'availableCourses' => []
+        ];
 
-        // Dodajemy kursy, na które student może się zapisać
-        $availableCourses = $this->studentService->findActiveCoursesWithFreeSpots();
-        foreach ($availableCourses as $course) {
-            $linksConfig['course_' . $course->getId()] = [
-                'route' => 'api_courses_id',
-                'param' => 'id',
-                'method' => 'GET',
-                'value' => $course->getId()
-            ];
-        }
+         // Dodajemy kursy, na które student jest zapisany do sekcji allCourses
+         $enrolledCourses = $this->studentService->findEnrolledCourses($id);
+         foreach ($enrolledCourses as $course) {             
+             $courseId = $course->getId();
+             $enrollment = $this->studentService->findEnrollment($id, $courseId);
+             $linksConfig['allCourses']['course_' . $courseId] = [
+                 'courseData' => [
+                     'route' => 'api_courses_id',
+                     'param' => 'id',
+                     'method' => 'GET',
+                     'value' => $courseId
+                 ],
+                 'enrollmentData' => [
+                     'route' => 'api_enrollments_id',
+                     'param' => 'id',
+                     'method' => 'GET',
+                     'value' => $enrollment->getId()
+                 ]
+             ];
+         }
+ 
+         // Dodajemy kursy, na które student może się zapisać do sekcji availableCourses
+         $availableCourses = $this->studentService->findActiveCoursesWithFreeSpots();
+         foreach ($availableCourses as $course) {
+             if (!in_array($course->getId(), array_column($enrolledCourses, 'course_id'))) {
+                 $linksConfig['availableCourses']['course_' . $course->getId()] = [
+                     'courseData' => [
+                         'route' => 'api_courses_id',
+                         'param' => 'id',
+                         'method' => 'GET',
+                         'value' => $course->getId()
+                     ],
+                     'enrollAdd' => [
+                         'route' => 'api_enrollments_add',
+                         'method' => 'POST',
+                         'body' => [
+                             'studentId' => $id,
+                             'courseId' => $course->getId()
+                         ]                         
+                     ]
+                 ];
+             }
+         }
 
         $data = $student->toArray();
-        //$data['user'] = $student->getUser() ? $student->getUser()->toArray() : null;
         $data['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);
         
         $jsonContent = $this->utilityService->serializeJson($data);

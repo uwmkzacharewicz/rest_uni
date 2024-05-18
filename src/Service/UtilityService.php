@@ -24,19 +24,31 @@ class UtilityService
     /** 
      * Generuje linki HATEOAS dla podanej encji
      */
-    public function generateHateoasLinks($entity, array $linksConfig)
-    {
-        $links = [];
-        foreach ($linksConfig as $linkName => $linkConfig) {
-            $paramValue = $linkConfig['value'] ?? $entity->getId();
-            $links[$linkName] = [
-                'href' => $this->urlGenerator->generate($linkConfig['route'], [$linkConfig['param'] => $paramValue], UrlGeneratorInterface::ABSOLUTE_URL),
+    public function generateHateoasLinks($entity, array $linksConfig): array
+{
+    $links = [];
+    foreach ($linksConfig as $linkName => $linkConfig) {
+        if (isset($linkConfig['route'])) {
+            $params = [];
+            if (isset($linkConfig['param'])) {
+                $paramValue = $linkConfig['value'] ?? $entity->getId();
+                $params[$linkConfig['param']] = $paramValue;
+            }
+            $link = [
+                'href' => $this->urlGenerator->generate($linkConfig['route'], $params, UrlGeneratorInterface::ABSOLUTE_URL),
                 'method' => $linkConfig['method']
             ];
+            if (isset($linkConfig['body'])) {
+                $link['body'] = $linkConfig['body'];
+            }
+            $links[$linkName] = $link;
+        } elseif (is_array($linkConfig)) {
+            $links[$linkName] = $this->generateHateoasLinks($entity, $linkConfig);
         }
-
-        return $links;
     }
+
+    return $links;
+}
 
     public function validateAndDecodeJson(Request $request, array $requiredFields): array
     {

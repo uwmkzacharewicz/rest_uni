@@ -61,13 +61,24 @@ class TeacherController extends AbstractController
                     'method' => 'GET',
                     'value' => $idUser
                 ],
-                'allCourses' => [
-                    'route' => 'api_users_id',
+                'allCourses' => []
+            ];
+
+
+            // Dodajemy kursy, które prowadzi nauczyciel
+            $courses = $teacher->getCourses();
+            foreach ($courses as $course) {
+                $linksConfig['allCourses']['course_' . $course->getId()] = [
+                    'route' => 'api_courses_id',
                     'param' => 'id',
                     'method' => 'GET',
-                    'value' => $idUser
-                ]
-            ];
+                    'value' => $course->getId()
+                ];
+            }
+
+
+
+
             $teacherData = $teacher->toArray();
             $teacherData['_links'] = $this->utilityService->generateHateoasLinks($teacher, $linksConfig);
 
@@ -115,12 +126,11 @@ class TeacherController extends AbstractController
                 'method' => 'GET',
                 'value' => $idUser
             ],
-            'allCourses' => [
-                'route' => 'api_users_id',
-                'param' => 'id',
-                'method' => 'GET',
-                'value' => $idUser
-        ] ];
+            'allCourses' => [],
+            'availableCourses' => []
+        ];
+
+        
 
         $data = $teacher->toArray();
         $data['user'] = $teacher->getUser() ? $teacher->getUser()->toArray() : null;
