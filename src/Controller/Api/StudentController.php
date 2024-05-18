@@ -212,12 +212,13 @@ class StudentController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email', 'username', 'password']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+            return $this->json(['status' => 'Użytkownik nie został dodany',
+                                'error' => 'Nie przekazano wymaganych danych', 
+                                'code' => Response::HTTP_BAD_REQUEST], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-       
         // Dodanie nowego studenta
-        $newStudent = $this->studentService->createStudentWithPassword($data['name'], $data['email'], $data['username'], $data['password']);
+        $newStudent = $this->studentService->createStudent($data['name'], $data['email'], $data['username'], $data['password']);
         $idUser = $newStudent->getUser() ? $newStudent->getUser()->getId() : null;
 
         $data = [];
@@ -276,7 +277,9 @@ class StudentController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+           return $this->json(['status' => 'Student nie został edytowany', 
+                                'error' => 'Nie przekazano wymaganych danych'], 
+                                JsonResponse::HTTP_BAD_REQUEST);
         }
 
         // Edycja studenta

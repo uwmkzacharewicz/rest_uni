@@ -2,6 +2,8 @@
 namespace App\Service;
 
 use App\Entity\Teacher;
+use App\Entity\Course;
+use App\Entity\Enrollment;
 use App\Entity\User;
 use App\Security\Role;
 use App\Service\EntityService;
@@ -112,6 +114,36 @@ class TeacherService
         $savedTeacher = $this->entityService->addEntity(Teacher::class, $TeacherData);
 
         return $savedTeacher;
+    }
+
+    // Znajdz kursy prowadzone przez nauczyciela
+    public function findCoursesByTeacher(int $teacherId): array
+    {
+        $teacher = $this->findTeacher($teacherId);
+        if (!$teacher) {
+            throw new \Exception('Teacher not found');
+        }
+
+        return $teacher->getCourses()->toArray();
+    }
+
+    // Znajdz zapisy, gdzie nauczyciel może wystawić ocenę
+    public function findEnrollmentsToGrade(int $teacherId): array
+    {
+        $courses = $this->findCoursesByTeacher($teacherId);
+        $enrollmentsToBeGranted = [];
+
+
+        foreach ($courses as $course) {
+            foreach ($course->getEnrollments() as $enrollment) {
+                if (!$enrollment->getGrade()) {
+                    $enrollmentsToBeGranted[] = $enrollment;
+                }
+
+            }
+        }
+
+        return $enrollmentsToBeGranted;
     }
 
     // edycja użytkownika

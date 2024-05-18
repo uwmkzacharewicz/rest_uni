@@ -15,6 +15,9 @@ use JMS\Serializer\SerializerInterface;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Annotation\Model;
 
+use App\Exception\CourseNotFoundException;
+use App\Exception\TeacherNotFoundException;
+
 #[OA\Tag(name: "Kursy")]
 #[Route("/api", "")]
 class CourseController extends AbstractController
@@ -42,18 +45,24 @@ class CourseController extends AbstractController
     public function getCourses(Request $request): Response
     {
         $teacherId = $request->query->get('teacherId');
+        $active = $request->query->get('active');
 
-        if ($teacherId !== null) {
-            try {
+        try {
+            if ($teacherId !== null) {
                 $courses = $this->courseService->findCoursesByTeacherId((int)$teacherId);
-            } catch (\Exception $e) {
-                return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
+            } elseif ($active !== null) {
+                $isActive = filter_var($active, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($isActive === null) {
+                    throw new \InvalidArgumentException('Invalid value for "active" parameter');
+                }
+                $courses = $this->courseService->findCoursesByActive($isActive);
+            } else {
+                $courses = $this->courseService->findAllCourses();
             }
-        } else {
-            $courses = $this->courseService->findAllCourses();
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        // Sprawdzenie, czy kursy zostały znalezione
         if (!$courses) {
             return $this->json(['error' => 'Nie znaleziono żadnego kursu'], JsonResponse::HTTP_NOT_FOUND);
         }
@@ -119,10 +128,25 @@ class CourseController extends AbstractController
                 'param' => 'id',
                 'method' => 'GET',
                 'value' => $idTeacher
-            ]
+            ],
+            'allStudents' => []
         ];
 
+         // Dodajemy studentów zapisanych na kurs do sekcji allStudents
+         $students = $this->courseService->findStudentsByCourse($id);
+         foreach ($students as $student) {
+             $studentId = $student->getId();
+             $linksConfig['allStudents']['student_' . $studentId] = [
+                 'route' => 'api_students_id',
+                 'param' => 'id',
+                 'method' => 'GET',
+                 'value' => $studentId
+             ];
+         }
+ 
+
         $courseData = $course->toArray();
+        $courseData['availableSpots'] = $course->getCapacity() - count($students); // Obliczanie wolnych miejsc
         $courseData['_links'] = $this->utilityService->generateHateoasLinks($course, $linksConfig);
 
         $jsonContent = $this->utilityService->serializeJson($courseData);
@@ -196,8 +220,14 @@ class CourseController extends AbstractController
             return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
         }
 
+        try {
+            $editedCourse = $this->courseService->editCourse($id, $data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        } catch (CourseNotFoundException | TeacherNotFoundException  $e) {
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
+        }
+
         // Edycja kursu
-        $editedCourse = $this->courseService->editCourse($id, $data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        
         $idTeacher = $editedCourse->getTeacher()->getId();
 
         $data = [];

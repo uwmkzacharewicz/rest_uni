@@ -246,6 +246,65 @@ class EnrollmentController extends AbstractController
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
     }
 
+    /**
+     * Edytuje zapis o podanym id.
+     *
+     * Wywołanie edycji zapisu kursu o podanym id
+     * 
+     */
+    #[OA\Response(response: 200, description: 'Zaktualizowano zapis na kurs')]
+    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\Response(response: 404, description: 'Not Found')]
+    #[Route('/enrollments/{id}', name: 'api_enrollments_edit', methods: ['PUT'])]
+    public function editEnrollment(int $id, Request $request): Response
+    {
+        try {
+            //Pobieranie i walidacja danych
+            $data = $this->utilityService->validateAndDecodeJson($request, 
+                                                                        ['studentId', 
+                                                                        'courseId', 'grade']);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            // Edycja zapisu
+            $editedEnrollment = $this->enrollmentService->editEnrollment($id, $data['studentId'], $data['courseId']);
+        } catch (StudentNotFoundException | StudentAlreadyEnrolledException | CourseNotFoundException | CourseNotActiveException | CourseFullException $e) {
+            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_CONFLICT);
+        }
+
+        $studentId = $editedEnrollment->getStudent()->getId();
+        $courseId = $editedEnrollment->getCourse()->getId();
+        $linksConfig = [
+            'self' => [
+                'route' => 'api_enrollments_id',
+                'param' => 'id',
+                'method' => 'GET'
+            ],
+            'studentData' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $studentId
+            ],
+            'courseData' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $courseId
+            ]
+        ];
+
+        $enrollmentData = $editedEnrollment->toArray();
+        $enrollmentData['_links'] = $this->utilityService->generateHateoasLinks($editedEnrollment, $linksConfig);
+
+        $jsonContent = $this->utilityService->serializeJson($enrollmentData);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+    }
+
+
+
     
 
 

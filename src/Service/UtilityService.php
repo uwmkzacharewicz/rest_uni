@@ -8,7 +8,9 @@ use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use JMS\Serializer\SerializerInterface;
 use JMS\Serializer\SerializationContext;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class UtilityService
 {
@@ -92,6 +94,29 @@ class UtilityService
     public function hashPassword(User $user, string $password): string
     {
         return $this->passwordHasher->hashPassword($user, $password);
+    }
+
+    public function createErrorResponse(string $status, string $error, int $code): JsonResponse
+    {
+        return new JsonResponse([
+            'status' => $status,
+            'error' => $error,
+            'code' => $code
+        ], $code);
+    }
+
+    public function createSuccessResponse(string $status, array $data = [], int $code = Response::HTTP_OK): Response
+    {
+        $response = [
+            'status' => $status
+        ];
+
+        if (!empty($data)) {
+            $response['data'] = $data;
+        }
+
+        $jsonContent = $this->serializeJson($response);
+        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
     }
 
 

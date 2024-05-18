@@ -127,8 +127,32 @@ class TeacherController extends AbstractController
                 'value' => $idUser
             ],
             'allCourses' => [],
-            'availableCourses' => []
+            'gradesToBeGiven' => []
         ];
+
+        // Dodajemy kursy prowadzone przez nauczyciela do sekcji allCourses
+        $courses = $this->teacherService->findCoursesByTeacher($id);
+        foreach ($courses as $course) {
+            $courseId = $course->getId();
+            $linksConfig['allCourses']['course_' . $courseId] = [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $courseId
+            ];
+        }
+
+        // Dodajemy zapisy, gdzie nauczyciel musi wystawić oceny do sekcji gradesToBeGiven
+        $enrollmentsToBeGraded = $this->teacherService->findEnrollmentsToGrade($id);
+        foreach ($enrollmentsToBeGraded as $enrollment) {
+            $enrollmentId = $enrollment->getId();
+            $linksConfig['gradesToBeGiven']['enrollment_' . $enrollmentId] = [
+                'route' => 'api_enrollments_id',
+                'param' => 'id',
+                'method' => 'GET',
+                'value' => $enrollmentId
+            ];
+        }
 
         
 

@@ -10,6 +10,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
+use App\Exception\UserNotFoundException;
+use App\Exception\RoleNotFoundException;
+
 class UserService
 {
     private $entityManager;
@@ -39,7 +42,6 @@ class UserService
     public function findUser(int $id): ?User
     {
         return $this->entityService->find(User::class, $id);
-        //return $this->entityManager->getRepository(User::class)->find($id);
     }
 
     // pobieranie użytkownika po nazwie użytkownika
@@ -48,11 +50,13 @@ class UserService
      */
     public function findUserByUsername(string $username): ?User
     {
-        return $this->entityService->findEntityByFiled(User::class, 'username', $username);
-       // return $this->entityManager->getRepository(User::class)->findOneBy(['username' => $username]);        
+        return $this->entityService->findEntityByField(User::class, 'username', $username);      
     }
 
     // dodanie nowego użytkownika
+    /**
+     * @return User|null
+     */
     public function addUser(string $username, string $password, array $roles): ?User
     {
         // Tworzenie instancji User
@@ -78,16 +82,30 @@ class UserService
     }
 
     // edycja użytkownika
+    /**
+     * @return User|null
+     */
     public function editUser(int $id, string $username, string $password, array $roles): ?User
     {
         $user = $this->findUser($id);
         if (!$user) {
-            throw new \Exception('User not found');
+            throw new UserNotFoundException('Użytkownik o id ' . $id . ' nie istnieje.');
         }
-        $user->setUsername($username);
-        $user->setPassword($this->passwordHasher->hashPassword($user, $password));
-        $user->setRoles($roles);
-        $this->entityService->updateEntity($user);
+
+        // sprawdzamy czy nowa rola jest poprawna
+        foreach ($roles as $role) {
+            if (!in_array($role, Role::ROLES)) {
+                throw new RoleNotFoundException('Nieznana rola użytkownika.');
+            }
+        }
+
+        $userData = [
+            'username' => $username,
+            'password' => $this->passwordHasher->hashPassword($user, $password),
+            'roles' => $roles
+        ];
+
+        $this->entityService->updateEntityWithFields($user, $userData);
 
         return $user;
     }
@@ -97,9 +115,9 @@ class UserService
     public function updateUserFields(int $id, array $data): User
     {
 
-        $user = $this->entityService->find(User::class, $id);
+        $user = $this->findUser($id);
         if (!$user) {
-            throw new \Exception('User not found');
+            throw new UserNotFoundException('Użytkownik o id ' . $id . ' nie istnieje.');
         }
 
         if (isset($data['password'])) {
@@ -110,7 +128,7 @@ class UserService
         if (isset($data['roles'])) {
             foreach ($data['roles'] as $role) {
                 if (!in_array($role, Role::ROLES)) {
-                    throw new \Exception('Nieznana rola użytkownika.');
+                    throw new RoleNotFoundException('Nieznana rola użytkownika.');
                 }
             }
         }
@@ -124,7 +142,7 @@ class UserService
     {
         $user = $this->findUser($id);
         if (!$user) {
-            throw new \Exception('Nie znaleziono użytkownika');
+            throw new UserNotFoundException("Nie znaleziono użytkownika o id {$id}");
         } 
 
         $this->entityService->deleteEntity($user);       
