@@ -10,6 +10,9 @@ use App\Security\Role;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
+use App\Exception\CustomException;
+use Exception;
+
 class StudentService
 {
     private $entityManager;
@@ -54,9 +57,8 @@ class StudentService
         if ($username && $password) {
             $existingUser = $this->entityService->findEntityByField(User::class, 'username', $username);
             if ($existingUser) {
-                throw new \Exception("Użytkownik o nazwie {$username} już istnieje");
+                throw CustomException::userAlreadyExists($username);
             }
-
             $newUser = $this->userService->addUser($username, $password, [Role::ROLE_STUDENT]);
         }
 
@@ -100,11 +102,26 @@ class StudentService
         ]);
     }
 
-    public function updateStudent(int $id, array $data): Student
+    public function editStudent(int $id, string $name, string $email): Student
     {
         $student = $this->findStudent($id);
         if (!$student) {
-            throw new \Exception('Nie znaleziono studenta.');
+            throw CustomException::studentNotFound($id);
+        }
+
+        $studentData = [
+            'name' => $name,
+            'email' => $email
+        ];
+
+        return $this->entityService->updateEntityWithFields($student, $studentData);
+    }
+
+    public function updateStudentFields(int $id, array $data): Student
+    {
+        $student = $this->findStudent($id);
+        if (!$student) {
+            throw CustomException::studentNotFound($id);
         }
 
         return $this->entityService->updateEntityWithFields($student, $data);
@@ -114,7 +131,7 @@ class StudentService
     {
         $student = $this->findStudent($id);
         if (!$student) {
-            throw new \Exception('Nie znaleziono użytkownika');
+            throw CustomException::studentNotFound($id);
         }
 
         $user = $student->getUser();

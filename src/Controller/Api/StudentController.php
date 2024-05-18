@@ -8,6 +8,9 @@ use App\Entity\Enrollment;
 use App\Service\UtilityService;
 use App\Service\StudentService;
 
+use App\Exception\CustomException;
+use Exception;
+
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -63,13 +66,7 @@ class StudentController extends AbstractController
                     'param' => 'id',
                     'method' => 'GET',
                     'value' => $idUser
-                ],
-                'allCourses' => [
-                    'route' => 'api_users_id',
-                    'param' => 'id',
-                    'method' => 'GET',
-                    'value' => $idUser
-                ]
+                ]                
             ];
             $studentData = $student->toArray();
             $studentData['_links'] = $this->utilityService->generateHateoasLinks($student, $linksConfig);
@@ -107,7 +104,7 @@ class StudentController extends AbstractController
          // Sprawdzenie, czy student został znaleziony
          if (!$student) {
             // Jeśli nie znaleziono studenta, zwróć odpowiedź z błędem 404
-            return $this->json(['error' => 'Nie znaleziono studenta o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Nie znaleziono studenta o id ' . $id, 'code' => Response::HTTP_NOT_FOUND ], Response::HTTP_NOT_FOUND);
         }
 
         $data = [];
@@ -126,7 +123,26 @@ class StudentController extends AbstractController
                 'value' => $idUser
             ],
             'allCourses' => [],
-            'availableCourses' => []
+            'availableCourses' => [],
+            'edit' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'PUT'
+            ],
+            'update' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'PATCH'
+            ],
+            'delete' => [
+                'route' => 'api_students_id',
+                'param' => 'id',
+                'method' => 'DELETE'
+            ],
+            'create' => [
+                'route' => 'api_students_add',
+                'method' => 'POST'
+            ]
         ];
 
          // Dodajemy kursy, na które student jest zapisany do sekcji allCourses
@@ -212,13 +228,16 @@ class StudentController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email', 'username', 'password']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-            return $this->json(['status' => 'Użytkownik nie został dodany',
-                                'error' => 'Nie przekazano wymaganych danych', 
-                                'code' => Response::HTTP_BAD_REQUEST], JsonResponse::HTTP_BAD_REQUEST);
+             return $this->utilityService->createErrorResponse('Student nie został dodany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
         // Dodanie nowego studenta
-        $newStudent = $this->studentService->createStudent($data['name'], $data['email'], $data['username'], $data['password']);
+        try {
+            $newStudent = $this->studentService->createStudent($data['name'], $data['email'], $data['username'], $data['password']);
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Student nie został dodany', $e->getMessage(), $e->getStatusCode());
+        }
+        
         $idUser = $newStudent->getUser() ? $newStudent->getUser()->getId() : null;
 
         $data = [];
@@ -241,8 +260,7 @@ class StudentController extends AbstractController
         $studentData['_links'] = $this->utilityService->generateHateoasLinks($newStudent, $linksConfig);
         $data[] = $studentData;
 
-        $jsonContent = $this->utilityService->serializeJson($data);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+        return $this->utilityService->createSuccessResponse('Dodano nowego studenta.', ['student' => $data], JsonResponse::HTTP_CREATED);
 
     }
 
@@ -277,13 +295,17 @@ class StudentController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-           return $this->json(['status' => 'Student nie został edytowany', 
-                                'error' => 'Nie przekazano wymaganych danych'], 
-                                JsonResponse::HTTP_BAD_REQUEST);
+             // Obsługa wyjątków
+             return $this->utilityService->createErrorResponse('Student nie został edytowany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);         
         }
 
         // Edycja studenta
-        $editedStudent = $this->studentService->editStudent($id, $data['name'], $data['email']);
+        try{
+            $editedStudent = $this->studentService->editStudent($id, $data['name'], $data['email']);
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Student nie został edytowany', $e->getMessage(), $e->getStatusCode());
+        }
+       
         $idUser = $editedStudent->getUser() ? $editedStudent->getUser()->getId() : null;
 
         $data = [];
@@ -306,8 +328,7 @@ class StudentController extends AbstractController
         $studentData['_links'] = $this->utilityService->generateHateoasLinks($editedStudent, $linksConfig);
         $data[] = $studentData;
 
-        $jsonContent = $this->utilityService->serializeJson($data);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+        return $this->utilityService->createSuccessResponse('Pomyślnie edytowano studenta.', ['student' => $data], Response::HTTP_OK);
     }
 
 
@@ -362,15 +383,17 @@ class StudentController extends AbstractController
 
             $studentData['student_info'] = $updatedStudent->toArray();
             $studentData['_links'] = $this->utilityService->generateHateoasLinks($updatedStudent, $linksConfig);
-            $status = ['status' => 'Zaktualizowano studenta.' ];
-            $data = array_merge($status, $studentData);
-            
-            $jsonContent = $this->utilityService->serializeJson($data);
-            return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+
+            return $this->utilityService->createSuccessResponse('Pomyślnie zaktualizowano studenta.', ['student' => $studentData], Response::HTTP_OK);            
         
-        } catch (\Exception $e) {           
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
-        }   
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Student nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }  
     }
 
 
@@ -393,10 +416,15 @@ class StudentController extends AbstractController
     {        
         try {
             $this->studentService->deleteStudent($id);
-            return $this->json(['status' => 'Usunięto studenta.'], Response::HTTP_OK);
-        } catch (\Exception $e) {           
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
-        }
+            return $this->json(['status' => 'Usunięto studenta.', 'code' => Response::HTTP_OK], Response::HTTP_OK);
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Student nie został usunięty', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }  
     }
 
     /**

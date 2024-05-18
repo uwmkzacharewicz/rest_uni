@@ -17,9 +17,8 @@ use JMS\Serializer\SerializerInterface;
 use Nelmio\ApiDocBundle\Annotation\Security;
 use OpenApi\Attributes as OA;
 
-use App\Exception\UserNotFoundException;
-use App\Exception\RoleNotFoundException;
-
+use App\Exception\CustomException;
+use Exception;
 
 
 #[OA\Tag(name: "Użytkownicy")]
@@ -88,12 +87,6 @@ class UserController extends AbstractController
     public function getUserbyId(int $id) : Response
     {
         $user = $this->userService->findUser($id);
-
-         // Sprawdzenie, czy student został znaleziony
-         if (!$user) {
-            // Jeśli nie znaleziono studenta, zwróć odpowiedź z błędem 404
-            return $this->json(['error' => 'Nie znaleziono użytkownika o id ' . $id, 'code' => Response::HTTP_NOT_FOUND], JsonResponse::HTTP_NOT_FOUND);
-        }
 
         $data = [];
 
@@ -171,9 +164,9 @@ class UserController extends AbstractController
 
 
     /**
-     * Aktualizacja lub tworzenie użytkownika.
+     * Edytowanie użytkownika.
      *
-     * Wywołanie aktualizuje użytkownika o podanym id lub tworzy nowego użytkownika.
+     * Wywołanie edycji użytkownika o podanym id lub tworzy nowego użytkownika.
      * 
      */
     #[Route('/users/{id}', name: 'api_users_edit', methods: ['PUT'])]
@@ -184,23 +177,33 @@ class UserController extends AbstractController
     )]
     public function editUser(Request $request, int $id): Response
     {
+
         try {
             // Pobranie i walidacja danych
             $data = $this->utilityService->validateAndDecodeJson($request, ['username', 'password']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-            return $this->utilityService->createErrorResponse('Użytkownik nie został dodany', 'Nie przekazano wymaganych danych', JsonResponse::HTTP_BAD_REQUEST);
+            return $this->utilityService->createErrorResponse('Użytkownik nie został edytowany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
         $roles = $data['roles'] ?? [Role::ROLE_USER];
 
         try {
+
             $user = $this->userService->editUser($id, $data['username'], $data['password'], $roles);
-            return $this->utilityService->createSuccessResponse('Dodano nowego użytkownika.', ['user' => $userData], JsonResponse::HTTP_CREATED);
-        } catch (UserNotFoundException | RoleNotFoundException $e) {           
-            return $this->utilityService->createErrorResponse('Użytkownik nie został dodany', 'Nie przekazano wymaganych danych', JsonResponse::HTTP_BAD_REQUEST);
-        }
-    }
+            
+            return $this->utilityService->createSuccessResponse('Edytowano użytkownika.', ['user' => $user], Response::HTTP_CREATED);
+
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Użytkownik nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
+        } 
+        // catch (Exception $e) {
+        //     return new JsonResponse([
+        //         'error' => 'Wystąpił błąd',
+        //         'message' => $e->getMessage()
+        //     ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        // } 
+}
 
     /**
      * Aktualizacja użytkownika.
@@ -221,9 +224,7 @@ class UserController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-           return $this->json(['status' => 'Użytkownik nie został zaktualizowany', 
-                                'error' => 'Nie poprawny format json.',
-                                'code' => Response::HTTP_BAD_REQUEST], Response::HTTP_BAD_REQUEST);
+            return $this->utilityService->createErrorResponse('Użytkownik nie został zaktualizowany.', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
         try {
@@ -240,14 +241,17 @@ class UserController extends AbstractController
             $userData['user_info'] = $updatedUser->toArray();
             $userData['_links'] = $this->utilityService->generateHateoasLinks($updatedUser, $linksConfig);        
            
-            return $this->utilityService->createSuccessResponse('Zauktualizowano użytkownika.', ['user' => $userData], JsonResponse::HTTP_OK);
+            return $this->utilityService->createSuccessResponse('Zauktualizowano użytkownika.', ['user' => $userData], Response::HTTP_OK);
         
-        } catch (UserNotFoundException | RoleNotFoundException $e) {           
-            return $this->utilityService->createErrorResponse('Użytkownik nie został zaktualizowany.', 'Nie znaleziono użytkownika lub nieznana rola', JsonResponse::HTTP_BAD_REQUEST);
-            return $this->json(['status' => 'Użytkownik nie został zaktualizowany', 
-                                'error' => $e->getMessage(), 
-                                'code' => Response::HTTP_BAD_REQUEST], Response::HTTP_BAD_REQUEST);
-        }        
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Użytkownik nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }       
+  
     }
    
 
@@ -264,15 +268,22 @@ class UserController extends AbstractController
     {
         try {
             $this->userService->deleteUser($id);
-            return $this->json(['status' => 'Usunięto użytkownika.'], Response::HTTP_OK);
-        } catch (UserNotFoundException $e) {           
-            return $this->json(['status' => 'Nie usunięto użytkownika.',
-                                'error' => $e->getMessage(), 
-                                'code' => Response::HTTP_NOT_FOUND], Response::HTTP_NOT_FOUND);
-        }
+            return $this->json(['status' => 'Usunięto użytkownika.', 'code' => Response::HTTP_OK], Response::HTTP_OK);
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Użytkownik nie został usunięty', $e->getMessage(), $e->getStatusCode());
+        } 
+        catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        } 
     }
 
     
+
+
+
     /**
      * Loguje użytkownika.
      *

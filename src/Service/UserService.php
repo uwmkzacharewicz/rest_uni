@@ -10,8 +10,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-use App\Exception\UserNotFoundException;
-use App\Exception\RoleNotFoundException;
+use App\Exception\CustomException;
+use Exception;
 
 class UserService
 {
@@ -89,13 +89,13 @@ class UserService
     {
         $user = $this->findUser($id);
         if (!$user) {
-            throw new UserNotFoundException('Użytkownik o id ' . $id . ' nie istnieje.');
+            throw CustomException::userNotFound($id);
         }
 
         // sprawdzamy czy nowa rola jest poprawna
         foreach ($roles as $role) {
             if (!in_array($role, Role::ROLES)) {
-                throw new RoleNotFoundException('Nieznana rola użytkownika.');
+                throw CustomException::roleNotFound();
             }
         }
 
@@ -117,7 +117,7 @@ class UserService
 
         $user = $this->findUser($id);
         if (!$user) {
-            throw new UserNotFoundException('Użytkownik o id ' . $id . ' nie istnieje.');
+            throw CustomException::userNotFound($id);
         }
 
         if (isset($data['password'])) {
@@ -128,7 +128,7 @@ class UserService
         if (isset($data['roles'])) {
             foreach ($data['roles'] as $role) {
                 if (!in_array($role, Role::ROLES)) {
-                    throw new RoleNotFoundException('Nieznana rola użytkownika.');
+                    throw CustomException::roleNotFound();
                 }
             }
         }
@@ -142,7 +142,7 @@ class UserService
     {
         $user = $this->findUser($id);
         if (!$user) {
-            throw new UserNotFoundException("Nie znaleziono użytkownika o id {$id}");
+            throw CustomException::userNotFound($id);
         } 
 
         $this->entityService->deleteEntity($user);       

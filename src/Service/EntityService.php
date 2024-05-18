@@ -9,9 +9,13 @@ use App\Entity\User;
 
 use App\Security\Role;
 
+
+
+use App\Exception\CustomException;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 
 class EntityService
 {
@@ -53,7 +57,8 @@ class EntityService
     {
         // Sprawdzenie, czy można ustawić wartość dla danego pola
         if (!$this->propertyAccessor->isWritable($entity, $field)) {
-            throw new \Exception("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . get_class($entity));            
+            //throw new \Exception("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . get_class($entity));  
+            throw CustomException::applicationError("Właściwość {$field} nie jest zapisywalna lub nie istnieje w " . get_class($entity));          
         }
         // Ustawienie wartości
         $this->propertyAccessor->setValue($entity, $field, $value);
@@ -72,7 +77,8 @@ class EntityService
                 if ($this->propertyAccessor->isWritable($entity, $property)) {
                     $this->propertyAccessor->setValue($entity, $property, $value);
                 } else {
-                    throw new \Exception("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . get_class($entity));
+                    throw CustomException::applicationError("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . get_class($entity));
+                   // throw new \Exception("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . get_class($entity));
                 }
             }
 
@@ -83,14 +89,12 @@ class EntityService
             return $entity;
 
         } catch (UniqueConstraintViolationException $e) {
-            // Obsługa specyficznych wyjątków związanych z naruszeniem ograniczeń
             $this->entityManager->rollback();
-            throw new \Exception('Database error: ' . $e->getMessage());
+            throw CustomException::databaseError($e->getMessage());
         } catch (\Exception $e) {
-            // Ogólna obsługa wyjątków
             $this->entityManager->rollback();
-            throw new \Exception('Application error: ' . $e->getMessage());
-        }         
+            throw CustomException::applicationError($e->getMessage());
+        }        
     }
 
     public function addEntity(string $entityClass, array $data)
@@ -106,7 +110,7 @@ class EntityService
                 if ($this->propertyAccessor->isWritable($entity, $property)) {
                     $this->propertyAccessor->setValue($entity, $property, $value);
                 } else {
-                    throw new \Exception("Właściwość {$property} nie jest zapisywalna lub nie istnieje w pliku" . $entityClass);
+                    throw CustomException::applicationError("Właściwość {$property} nie jest zapisywalna lub nie istnieje w " . $entityClass);
                 }
             }
 
@@ -117,13 +121,11 @@ class EntityService
             return $entity;
 
         } catch (UniqueConstraintViolationException $e) {
-            // Obsługa specyficznych wyjątków związanych z naruszeniem ograniczeń
             $this->entityManager->rollback();
-            throw new \Exception('Database error: ' . $e->getMessage());
+            throw CustomException::databaseError($e->getMessage());
         } catch (\Exception $e) {
-            // Ogólna obsługa wyjątków
             $this->entityManager->rollback();
-            throw new \Exception('Application error: ' . $e->getMessage());
+            throw CustomException::applicationError($e->getMessage());
         }
     
     }
@@ -139,12 +141,12 @@ class EntityService
             return $entity;
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            throw new \Exception('Application error during entity update: ' . $e->getMessage());
+            throw CustomException::applicationError('Application error during entity update: ' . $e->getMessage());
         }
     }
 
 
-    public function deleteEntiy($entity)
+    public function deleteEntity($entity)
     {
         $this->entityManager->beginTransaction();
         try {
@@ -153,7 +155,7 @@ class EntityService
             $this->entityManager->commit();
         } catch (\Exception $e) {
             $this->entityManager->rollback();
-            throw new \Exception('Application error: ' . $e->getMessage());
+            throw CustomException::applicationError('Application error: ' . $e->getMessage());
         }
     }
 

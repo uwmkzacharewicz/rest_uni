@@ -59,7 +59,7 @@ class EnrollmentController extends AbstractController
         }
 
         if (!$enrollments) {
-            return $this->json(['error' => 'Nie znaleziono kursów'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Nie znaleziono kursów o podanych kryteriach', 'code' => Response::HTTP_NOT_FOUND], Response::HTTP_NOT_FOUND);
         }
 
         $data = [];
@@ -299,6 +299,7 @@ class EnrollmentController extends AbstractController
         $enrollmentData = $editedEnrollment->toArray();
         $enrollmentData['_links'] = $this->utilityService->generateHateoasLinks($editedEnrollment, $linksConfig);
 
+        
         $jsonContent = $this->utilityService->serializeJson($enrollmentData);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
     }
