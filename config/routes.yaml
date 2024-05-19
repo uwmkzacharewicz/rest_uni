@@ -6,11 +6,10 @@ controllers:
 
 api_login_check:
     path: /api/login
-    controller: App\Controller\SecurityController::login
+    controller: App\Controller\AuthController::login
     methods: POST
 
-# api_test:
-#     path: /api/test
-#     controller: App\Controller\ApiTestController::index
-#     methods: GET
-
+app.swagger_ui:
+    path: /api/doc
+    methods: GET
+    defaults: { _controller: nelmio_api_doc.controller.swagger_ui }

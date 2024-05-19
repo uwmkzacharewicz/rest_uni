@@ -4,7 +4,15 @@ nelmio_api_doc:
             title: My App
             description: This is an awesome app!
             version: 1.0.0
+        security:
+            - Bearer: []
         components:
+            securitySchemes:
+                Bearer:          
+                    type: apiKey
+                    description: 'Authorization: Bearer {jwt}'
+                    name: Authorization
+                    in: header
             responses:
                 UserList200:
                     description: 'Zwraca listę użytkowników'
@@ -36,11 +44,7 @@ nelmio_api_doc:
                                 notFound:
                                     summary: 'Przykład odpowiedzi 404'
                                     value: { message: 'Nie znaleziono użytkowników' }
-            securitySchemes:
-                bearerAuth:          
-                    type: http
-                    scheme: bearer
-                    bearerFormat: JWT   
+            
             schemas:
                 User:
                     type: object
@@ -185,9 +189,7 @@ nelmio_api_doc:
                         - description
                         - capacity
                         - active
-                        - teacher_id
-        security:
-            # - bearerAuth: []           # Zastosowanie globalne dla wszystkich endpointów                        
+                        - teacher_id                                
                 
     areas: # to filter documented areas
         path_patterns:

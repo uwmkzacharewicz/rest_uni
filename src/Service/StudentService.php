@@ -50,6 +50,11 @@ class StudentService
         return $student->getUser();
     }
 
+    public function findStudentByUser(User $user): ?Student
+    {
+        return $this->entityService->findEntityByField(Student::class, 'login', $user);
+    }
+
     public function createStudent(string $name, string $email, ?string $username = null, ?string $password = null): ?Student
     {
         $newUser = null;

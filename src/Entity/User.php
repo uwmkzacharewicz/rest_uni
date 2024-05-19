@@ -107,6 +107,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         // $this->plainPassword = null;
     }
 
+    public function getStudent(): ?Student
+    {
+        return $this->student;
+    }
+
+    public function setStudent(?Student $student): static
+    {
+        $this->student = $student;
+
+        return $this;
+    }
+
     public function toArray(): array
     {
         return [

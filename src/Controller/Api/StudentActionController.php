@@ -14,21 +14,27 @@ use OpenApi\Attributes as OA;
 
 use App\Exception\CustomException;
 use Exception;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 
 #[OA\Tag(name: "Akcje dla studenta")]
 #[Security(name: 'Bearer')]
+#[IsGranted('ROLE_STUDENT')]
 #[Route("/api/students", "")]
 class StudentActionController extends AbstractController
 {
     private $studentService;
     private $enrollmentService;
     private $utilityService;
+    private $tokenStorage;
 
-    public function __construct(StudentService $studentService, EnrollmentService $enrollmentService, UtilityService $utilityService) {
+
+    public function __construct(StudentService $studentService, EnrollmentService $enrollmentService, UtilityService $utilityService, TokenStorageInterface $tokenStorage) {
         $this->studentService = $studentService;
         $this->enrollmentService = $enrollmentService;
         $this->utilityService = $utilityService;
+        $this->tokenStorage = $tokenStorage;
     }
 
     /** Zapisuje studenta na kurs
@@ -41,6 +47,17 @@ class StudentActionController extends AbstractController
     #[Route('/{studentId}/enrollments', name: 'api_students_enroll', methods: ['POST'])]
     public function enrollStudent(int $studentId, Request $request): Response
     {
+        $this->denyAccessUnlessGranted('ROLE_STUDENT');
+        $token = $this->tokenStorage->getToken();
+        $user = $token->getUser();
+
+        $student = $this->studentService->findStudentByUser($user);
+
+        if ($student->getId() !== $studentId) {
+            return $this->json(['error' => 'Nie masz uprawnień do tego zasobu'], Response::HTTP_FORBIDDEN);
+        }
+        
+
         try {
             $data = $this->utilityService->validateAndDecodeJson($request, ['courseId']);
             $enrollment = $this->enrollmentService->createEnrollment($studentId, $data['courseId']);
