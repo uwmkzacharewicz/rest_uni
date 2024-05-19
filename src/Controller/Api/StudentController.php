@@ -434,7 +434,6 @@ class StudentController extends AbstractController
      */
         // /students/3001/courses
     #[Route('/students/{id}/courses', name: 'api_students_courses', methods: ['GET'])]
-    #[OA\Tag(name: "Operacje na kursach")]
     #[OA\Response(
         response: 200,
         description: 'Zwraca listę kursów studenta o podanym identyfikatorze',

@@ -31,6 +31,11 @@ class StudentActionController extends AbstractController
         $this->utilityService = $utilityService;
     }
 
+    /** Zapisuje studenta na kurs
+     * 
+     * Wywołanie zapisuje studenta na kurs
+     * 
+    */
     #[OA\Response(response: 201, description: 'Student zapisany na kurs')]
     #[OA\Response(response: 400, description: 'Bad Request')]
     #[Route('/{studentId}/enrollments', name: 'api_students_enroll', methods: ['POST'])]
@@ -76,6 +81,11 @@ class StudentActionController extends AbstractController
         }
     }
 
+    /** Wypisuje studenta na kurs
+     * 
+     *  Wywołanie wypisuje studenta z kursu
+     * 
+    */
     #[OA\Response(response: 200, description: 'Student wypisany z kursu')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/{studentId}/enrollments/{enrollmentId}', name: 'api_students_unenroll', methods: ['DELETE'])]
@@ -92,39 +102,37 @@ class StudentActionController extends AbstractController
         }
     }
 
+    /** Wyświetla ocenę z kursu
+     * 
+     * Wywołanie zwraca ocenę studenta z kursu
+     * 
+    */
     #[OA\Response(response: 200, description: 'Ocena za kurs')]
     #[OA\Response(response: 404, description: 'Not Found')]
-    #[Route('/{studentId}/courses/{courseId}/grade', name: 'api_students_grade', methods: ['GET'])]
-    public function getGrade(int $studentId, int $courseId): Response
+    #[Route('/enrollments/{enrollmentsId}/grade', name: 'api_students_enrollments_grade', methods: ['GET'])]
+    public function getGrade(int $enrollmentsId): Response
     {
-        try {
-            $enrollment = $this->enrollmentService->findEnrollmentByStudentAndCourse($studentId, $courseId);
+        try{
+            $enrollment = $this->enrollmentService->findEnrollment($enrollmentsId);
+            if (!$enrollment) {
+                throw CustomException::enrollmentNotFound($enrollmentsId);
+        } 
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Ocena nie została wystawiona', $e->getMessage(), $e->getStatusCode());
+        }
 
-            $grade = $enrollment->getGrade();
+        $grade = $enrollment->getGrade();
+        $studentName = $enrollment->getStudent()->getName();
+        $courseTitle = $enrollment->getCourse()->getTitle();
 
-            $studentName = $enrollment->getStudent()->getName();
-            $courseTitle = $enrollment->getCourse()->getTitle();
+        $data = [
+            'student' =>  $studentName,
+            'courseId' => $courseTitle,
+            'grade' => $grade
+        ];
 
-            $data = [
-                'student' =>  $studentName,
-                'courseId' => $courseTitle,
-                'grade' => $grade
-            ];
-
-            $jsonContent = $this->utilityService->serializeJson($data);
-            return new Response($jsonContent, Response::HTTP_OK, ['Content-Type' => 'application/json']);
-        
-        } catch (CustomException $e) {     
-            return $this->utilityService->createErrorResponse('Student nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
-        } catch (Exception $e) {
-            return new JsonResponse([
-                'error' => 'Wystąpił błąd',
-                'message' => $e->getMessage()
-            ], Response::HTTP_INTERNAL_SERVER_ERROR);
-        }  
+        $jsonContent = $this->utilityService->serializeJson($data);
+        return new Response($jsonContent, Response::HTTP_OK, ['Content-Type' => 'application/json']);    
     }
-
-
-
 
 }

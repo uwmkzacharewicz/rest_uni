@@ -42,6 +42,38 @@ security:
         ROLE_STUDENT: [ROLE_USER]
 
     access_control:
+        # Public endpoints
+        - { path: ^/api/login, roles: IS_AUTHENTICATED_ANONYMOUSLY }
+       
+
+        # Kursy: ROLE_TEACHER
+        - { path: ^/api/courses, roles: ROLE_TEACHER }
+
+        # Zapisy na Kursy: ROLE_ADMIN
+        - { path: ^/api/enrollments, roles: ROLE_ADMIN }
+
+        # Akcja dla studenta: ROLE_STUDENT
+        - { path: ^/api/students/\d+/enrollments, roles: ROLE_STUDENT }
+        - { path: ^/api/students/enrollments/\d+/grade, roles: ROLE_STUDENT }
+
+        # Studenci: ROLE_ADMIN
+        - { path: ^/api/students, roles: ROLE_ADMIN }
+
+        # Akcje dla nauczyciela: ROLE_TEACHER
+        - { path: ^/api/teachers/courses, roles: ROLE_TEACHER }
+        - { path: ^/api/teachers/courses/\d+/capacity, roles: ROLE_TEACHER }
+        - { path: ^/api/teachers/courses/\d+/block, roles: ROLE_TEACHER }
+        - { path: ^/api/teachers/courses/\d+/unblock, roles: ROLE_TEACHER }
+        - { path: ^/api/teachers/courses/\d+/students, roles: ROLE_TEACHER }
+        - { path: ^/api/teachers/enrollments/\d+/grade, roles: ROLE_TEACHER }
+
+        # Nauczyciele, użytkownicy: ROLE_ADMIN
+        - { path: ^/api/teachers, roles: ROLE_ADMIN }
+        - { path: ^/api/users, roles: ROLE_ADMIN }
+        - { path: ^/api/doc, roles: ROLE_ADMIN }
+
+        # Default deny all
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/api/courses, roles: [ROLE_TEACHER, ROLE_ADMIN] }
         # - { path: ^/api/teachers, roles: ROLE_TEACHER }
         # - { path: ^/api/students, roles: ROLE_STUDENT }

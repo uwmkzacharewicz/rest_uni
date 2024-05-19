@@ -35,6 +35,11 @@ class TeacherActionController extends AbstractController
         $this->security = $security;
     }
 
+     /** Tworzy nowy kurs 
+     * 
+     * Wywołanie tworzy nowy kurs
+     * 
+    */
     #[OA\Response(response: 201, description: 'Utworzono nowy kurs')]
     #[OA\Response(response: 400, description: 'Bad Request')]
     #[Route('/courses', name: 'api_teachers_courses_add', methods: ['POST'])]
@@ -88,6 +93,11 @@ class TeacherActionController extends AbstractController
         return $this->utilityService->createSuccessResponse('Dodano nowy kurs.', ['course' => $courseData], Response::HTTP_CREATED);
     }
 
+    /** Zmienia limit miejsc na kursie
+     * 
+     * Wywołanie zmienia limit miejsc na kursie
+     * 
+    */
     #[OA\Response(response: 200, description: 'Zaktualizowano kurs')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/capacity', name: 'api_teachers_courses_capacity', methods: ['PATCH'])]
@@ -140,6 +150,11 @@ class TeacherActionController extends AbstractController
 
     }
 
+    /** Blokuje możliwość zapisu na kurs
+     * 
+     * Wywołanie blokuje możliwość zapisu na kurs
+     * 
+    */
     #[OA\Response(response: 200, description: 'Zablokowano rejestrację na kurs')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/block', name: 'api_teachers_courses_block', methods: ['PATCH'])]
@@ -169,7 +184,12 @@ class TeacherActionController extends AbstractController
         return $this->utilityService->createSuccessResponse('Pomyślnie zmieniono status kursu.', ['course' => $courseData], Response::HTTP_OK);    
     }
 
-    #[OA\Response(response: 200, description: 'Zablokowano rejestrację na kurs')]
+     /** Odblokowuje możliwość zapisu na kurs
+     * 
+     * Wywołanie odblokowuje możliwość zapisu na kurs
+     * 
+    */
+    #[OA\Response(response: 200, description: 'Odblokowano rejestrację na kurs')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/unblock', name: 'api_teachers_courses_unblock', methods: ['PATCH'])]
     public function unblockCourse(int $courseId): Response
@@ -198,6 +218,11 @@ class TeacherActionController extends AbstractController
         return $this->utilityService->createSuccessResponse('Pomyślnie zmieniono status kursu.', ['course' => $courseData], Response::HTTP_OK);    
     }
 
+     /** Wyświetla listę studentów na danym kursie
+     * 
+     * Wywołanie zwraca listę studentów na danym kursie
+     * 
+    */
     #[OA\Response(response: 200, description: 'Lista studentów na kursie')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/students', name: 'api_teachers_courses_students', methods: ['GET'])]
@@ -231,7 +256,12 @@ class TeacherActionController extends AbstractController
         return $this->utilityService->createSuccessResponse('Lista studentów na kursie.', ['students' => $studentsData], Response::HTTP_OK);
 
     }
-
+    
+     /** Wystawia ocenę dla studenta
+     * 
+     * Wywołanie wystawia ocenę dla studenta
+     * 
+    */
     #[OA\Response(response: 200, description: 'Wystawienie oceny dla studenta')]
     #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments/{enrollmentsId}/grade', name: 'api_teachers_enrollments_grade', methods: ['PATCH'])]
