@@ -21,6 +21,14 @@ use Exception;
 
 
 #[OA\Tag(name: "Nauczyciele")]
+#[Security(name: 'Bearer')]
+#[IsGranted('ROLE_ADMIN')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api", "")]
 class TeacherController extends AbstractController
 {
@@ -42,8 +50,6 @@ class TeacherController extends AbstractController
      * Wywołanie wyświetla wszystkich nauczycieli wraz z ich linkiem do szczegółów.
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca listę nauczycieli')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/teachers', name: 'api_teachers', methods: ['GET'])]
     public function getTeachers() : Response
     {
@@ -82,12 +88,7 @@ class TeacherController extends AbstractController
      *
      * Wywołanie wyświetla szczegóły nauczyciela o podanym identyfikatorze.
      * 
-     */     
-   
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]   
+     */   
     #[Route('/teachers/{id}', name: 'api_teachers_id', methods: ['GET'])]
     public function getTeacherById(int $id): Response
     {
@@ -176,12 +177,6 @@ class TeacherController extends AbstractController
      * Wywołanie dodaje nowego nauczyciela na podstawie przekazanych danych.
      * 
      */ 
-
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]
-    
     #[Route('/teachers', name: 'api_teachers_add', methods: ['POST'])]
     public function addTeacher(Request $request): Response
     {
@@ -232,12 +227,12 @@ class TeacherController extends AbstractController
      *
      * Wywołanie pozwala na edycję danych nauczyciela.
      * 
-     */
-
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]   
+     */ 
+    #[OA\RequestBody(
+        description: 'Dane nauczyciela do aktualizacji',
+        required: true,
+        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
+    )] 
     #[Route('/teachers/{id}', name: 'api_teachers_edit', methods: ['PUT'])]
     public function editTeacher(int $id, Request $request): Response
     {
@@ -287,11 +282,6 @@ class TeacherController extends AbstractController
      * Wywołanie pozwala na aktualizację wybranych pól nauczyciela.
      * 
      */
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]
-
     #[Route('/teachers/{id}', name: 'api_teachers_update', methods: ['PATCH'])]
     public function updateTeacherFields(int $id, Request $request): Response
     {
@@ -339,15 +329,6 @@ class TeacherController extends AbstractController
      * Wywołanie pozwala na usunięcie nauczyciela o podanym identyfikatorze.
      * 
      */
-
-    #[OA\Response(
-        response: 204,
-        description: 'Usuwa nauczyciela'
-    )]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
     #[Route('/teachers/{id}', name: 'api_teachers_delete', methods: ['DELETE'])]
     public function deleteTeacher(int $id): Response
     {

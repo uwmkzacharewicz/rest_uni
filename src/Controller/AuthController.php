@@ -10,9 +10,10 @@ use Symfony\Component\Security\Core\User\UserInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use OpenApi\Attributes as OA;
 
+
 class AuthController extends AbstractController
 {
-    #[OA\Tag(name: "Użytkownicy")]
+    #[OA\Tag(name: "Autoryzacja")]
     #[OA\Response(
         response: 201,
         description: 'Poprawnie zalogowano użytkownika',
@@ -51,6 +52,7 @@ class AuthController extends AbstractController
             'username' => $user->getUserIdentifier(),
             'roles' => $user->getRoles(),
             'token' => $token,
+            'authorization' => 'Bearer ' . $token
         ]);
     }
 }

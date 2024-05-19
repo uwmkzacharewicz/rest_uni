@@ -19,6 +19,14 @@ use App\Exception\CustomException;
 use Exception;
 
 #[OA\Tag(name: "Kursy")]
+#[Security(name: 'Bearer')]
+#[IsGranted('ROLE_TEACHER')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api", "")]
 class CourseController extends AbstractController
 {
@@ -39,8 +47,18 @@ class CourseController extends AbstractController
      * Wywołanie wyświetla wszystkie kursy
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca listę kursów')]
-    #[OA\Response(response: 404, description: 'Not Found')]
+    #[OA\Parameter(
+        name: 'teacherId',
+        in: 'query',
+        description: 'Filtr po id nauczyciela',
+        schema: new OA\Schema(type: 'string')
+    )]
+    #[OA\Parameter(
+        name: 'active',
+        in: 'query',
+        description: 'Filtr po statusie kursu (true/false)',
+        schema: new OA\Schema(type: 'bool')
+    )]    
     #[Route('/courses', name: 'api_courses', methods: ['GET'])]
     public function getCourses(Request $request): Response
     {
@@ -102,12 +120,9 @@ class CourseController extends AbstractController
      * Wywołanie wyświetla kurs o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca kurs o podanym id')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{id}', name: 'api_courses_id', methods: ['GET'])]
     public function getCourseById(int $id): Response
     {
-
         $course = $this->courseService->findCourse($id);
          // Sprawdzenie, czy teacher został znaleziony
          if (!$course) {
@@ -179,8 +194,7 @@ class CourseController extends AbstractController
      * Wywołanie dodaje nowy kurs
      * 
      */
-    #[OA\Response(response: 201, description: 'Dodaje nowy kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\RequestBody(description: 'Dane do utworzenia nowego kursu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewCourse"))]
     #[Route('/courses', name: 'api_courses_add', methods: ['POST'])]
     public function addCourse(Request $request): Response
     {
@@ -230,9 +244,7 @@ class CourseController extends AbstractController
      * Wywołanie edycji kursu o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Aktualizuje kurs o podanym id')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
-    #[OA\Response(response: 404, description: 'Not Found')]
+    #[OA\RequestBody(description: 'Dane do edycji kursu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewCourse"))]
     #[Route('/courses/{id}', name: 'api_courses_edit', methods: ['PUT'])]
     public function editCourse(int $id, Request $request): Response
     {
@@ -281,9 +293,7 @@ class CourseController extends AbstractController
      * Wywołanie aktualizuje kurs o podanym id
      * 
     */
-    #[OA\Response(response: 200, description: 'Aktualizuje kurs o podanym id')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
-    #[OA\Response(response: 404, description: 'Not Found')]
+    #[OA\RequestBody(description: 'Dane do aktualizacji kursu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EditCourse"))]
     #[Route('/courses/{id}', name: 'api_courses_update', methods: ['PATCH'])]
     public function patchCourse(int $id, Request $request): Response
     {
@@ -335,8 +345,6 @@ class CourseController extends AbstractController
      * Wywołanie usuwa kurs o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Usuwa kurs o podanym id')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{id}', name: 'api_courses_delete', methods: ['DELETE'])]
     public function deleteCourse(int $id): Response
     {

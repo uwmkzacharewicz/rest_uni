@@ -19,7 +19,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 
 #[OA\Tag(name: "Akcje dla studenta")]
-#[Security(name: 'Bearer')]
+#[Security(name: "Bearer")]
 #[IsGranted('ROLE_STUDENT')]
 #[Route("/api/students", "")]
 class StudentActionController extends AbstractController

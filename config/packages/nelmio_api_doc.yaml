@@ -1,9 +1,9 @@
 nelmio_api_doc:
     documentation:
         info:
-            title: My App
-            description: This is an awesome app!
-            version: 1.0.0
+            title: REST API
+            description: Zadanie nr 3, Systemy Rozproszone!
+            version: 2.6.0
         security:
             - Bearer: []
         components:
@@ -171,13 +171,13 @@ nelmio_api_doc:
                     properties:
                         title:
                             type: string
-                            example: "Sieci komputerowe"
+                            example: "Nazwa kursu"
                         description:
                             type: string
-                            example: "Internet, sieci, protokoły"
+                            example: "Opis kursu"
                         teacher_id:
                             type: integer
-                            example: 1                        
+                            example: 2000                        
                         capacity:
                             type: integer  
                             example: 10
@@ -187,9 +187,29 @@ nelmio_api_doc:
                     required:
                         - title
                         - description
+                        - teacher_id  
                         - capacity
                         - active
-                        - teacher_id                                
+                EditCourse:
+                    type: object
+                    properties:
+                        title:
+                            type: string
+                            example: "Nazwa kursu"
+                        description:
+                            type: string
+                            example: "Opis kursu"
+                        teacher_id:
+                            type: integer
+                            example: 2000                        
+                        capacity:
+                            type: integer  
+                            example: 10
+                        active:
+                            type: boolean
+                            example: true
+
+                                                      
                 
     areas: # to filter documented areas
         path_patterns:

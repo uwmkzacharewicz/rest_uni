@@ -24,6 +24,13 @@ use Nelmio\ApiDocBundle\Annotation\Model;
 
 #[OA\Tag(name: "Studenci")]
 #[Security(name: 'Bearer')]
+#[IsGranted('ROLE_ADMIN')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api", "")]
 class StudentController extends AbstractController
 {
@@ -44,8 +51,6 @@ class StudentController extends AbstractController
      * Wywołanie wyświetla wszystkich studentów wraz z ich linkiem do szczegółów.
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca listę studentów')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/students', name: 'api_students', methods: ['GET'])]
     public function getStudents() : Response
     {
@@ -83,19 +88,7 @@ class StudentController extends AbstractController
      *
      * Wywołanie wyświetla szczegóły studenta o podanym identyfikatorze.
      * 
-     */     
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca studenta o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]   
+     */    
     #[Route('/students/{id}', name: 'api_students_id', methods: ['GET'])]
     public function getStudentById(int $id): Response
     {
@@ -203,23 +196,11 @@ class StudentController extends AbstractController
      * Wywołanie dodaje nowego studenta na podstawie przekazanych danych.
      * 
      */ 
-    #[OA\Response(
-        response: 201,
-        description: 'Dodaje studenta',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]
     #[OA\RequestBody(
-        description: 'Dane nowego użytkownika',
+        description: 'Dane nowego studenta',
         required: true,
         content: new OA\JsonContent(ref: "#/components/schemas/NewStudent")
-    )] 
+    )]     
     #[Route('/students', name: 'api_students_add', methods: ['POST'])]
     public function addStudent(Request $request): Response
     {
@@ -270,18 +251,6 @@ class StudentController extends AbstractController
      * Wywołanie pozwala na edycję studenta o podanym identyfikatorze.
      * 
      */
-    #[OA\Response(
-        response: 200,
-        description: 'Edytuje studenta o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]   
     #[OA\RequestBody(
         description: 'Dane studenta do aktualizacji',
         required: true,
@@ -332,23 +301,11 @@ class StudentController extends AbstractController
 
 
     /**
-     * Aktualizacja studenta. PATCH
+     * Aktualizacja studenta.
      *
      * Wywołanie aktualizuje użytkownika o podanym id lub tworzy nowego użytkownika.
      * 
-     */
-    #[OA\Response(
-        response: 200,
-        description: 'Aktualizuje studenta o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Student::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 400,
-        description: 'Bad Request'
-    )]
+     */    
     #[OA\RequestBody(
         description: 'Dane studenta do aktualizacji',
         required: true,
@@ -401,15 +358,7 @@ class StudentController extends AbstractController
      *
      * Wywołanie pozwala na usunięcie studenta o podanym identyfikatorze.
      * 
-     */
-    #[OA\Response(
-        response: 204,
-        description: 'Usuwa studenta o podanym identyfikatorze'
-    )]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
+     */   
     #[Route('/students/{id}', name: 'api_students_delete', methods: ['DELETE'])]
     public function deleteStudent(int $id): Response
     {        
@@ -434,18 +383,6 @@ class StudentController extends AbstractController
      */
         // /students/3001/courses
     #[Route('/students/{id}/courses', name: 'api_students_courses', methods: ['GET'])]
-    #[OA\Response(
-        response: 200,
-        description: 'Zwraca listę kursów studenta o podanym identyfikatorze',
-        content: new OA\JsonContent(
-            type: 'array',
-            items: new OA\Items(ref: new Model(type: Course::class))
-        ))
-    ]
-    #[OA\Response(
-        response: 404,
-        description: 'Not Found'
-    )]
     public function getStudentCourses(int $id): Response
     {
         $student = $this->entityManager->getRepository(Student::class)->find($id);
