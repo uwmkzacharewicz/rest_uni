@@ -9,8 +9,6 @@ use App\Entity\User;
 
 use App\Security\Role;
 
-
-
 use App\Exception\CustomException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PropertyAccess\PropertyAccess;

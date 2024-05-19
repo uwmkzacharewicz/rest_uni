@@ -13,9 +13,11 @@ use App\Service\UtilityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
+use App\Exception\CustomException;
+use Exception;
+
 class TeacherService
 {
-
     private $entityManager;
     private $entityService;
 
@@ -67,22 +69,21 @@ class TeacherService
     {
         $Teacher = $this->findTeacher($id);
         if (!$Teacher) {
-            throw new \Exception('Teacher not found');
+            throw CustomException::teacherNotFound($id);
         }
         return $Teacher->getUser();
     }
 
     // dodanie nowego Teachera
-    public function createTeacherWithPassword(string $TeacherName, string $email, string $specialization ,string $username, string $password): ?Teacher
+    public function createTeacher(string $TeacherName, string $email, string $specialization ,string $username, string $password): ?Teacher
     {
          // Sprawdź, czy użytkownik o danym username już istnieje
          $existingUser = $this->entityService->findEntityByFiled(User::class, 'username', $username);
          if ($existingUser) {
-             return $this->json(['error' => "Użytkownik o nazwie {$username} już istnieje"], JsonResponse::HTTP_CONFLICT);
+            throw CustomException::userAlreadyExists($id);
          }
  
         // Tworzenie instancji User
-
         $newUser = $this->userService->addUser($username, $password, [Role::ROLE_TEACHER]);
         // Dodanie użytkownika za pomocą EntityService
         $userData = [
@@ -103,25 +104,13 @@ class TeacherService
         return $savedTeacher;
     }
 
-    public function addTeacherWithoutPassword(string $TeacherName, string $email): ?Teacher
-    {
-        // Tworzenie instancji Teacher
-         // Dodanie użytkownika za pomocą EntityService
-         $TeacherData = [
-            'name' => $TeacherName,
-            'email' => $email,
-        ];
-        $savedTeacher = $this->entityService->addEntity(Teacher::class, $TeacherData);
-
-        return $savedTeacher;
-    }
 
     // Znajdz kursy prowadzone przez nauczyciela
     public function findCoursesByTeacher(int $teacherId): array
     {
         $teacher = $this->findTeacher($teacherId);
         if (!$teacher) {
-            throw new \Exception('Teacher not found');
+            throw CustomException::teacherNotFound($id);
         }
 
         return $teacher->getCourses()->toArray();
@@ -151,7 +140,7 @@ class TeacherService
     {
         $teacher = $this->findTeacher($id);
         if (!$teacher) {
-            throw new \Exception('Teacher not found');
+            throw CustomException::teacherNotFound($id);
         }
 
         $teacherData = [
@@ -172,7 +161,7 @@ class TeacherService
         //$teacher = $this->entityService->find(Teacher::class, $id);
         $teacher = $this->findTeacher($id);
         if (!$teacher) {
-            throw new \Exception('Nie znaleziono nauczyciela.');
+            throw CustomException::teacherNotFound($id);
         }
 
         return $this->entityService->updateEntityWithFields($teacher, $data);         
@@ -184,7 +173,7 @@ class TeacherService
      {
          $teacher = $this->findTeacher($id);
          if (!$teacher) {
-             throw new \Exception('Nie znaleziono użytkownika');
+            throw CustomException::teacherNotFound($id);
          }
  
          $user = $teacher->getUser();       
@@ -196,11 +185,11 @@ class TeacherService
             $this->entityManager->flush(); // Zapisz zmiany, aby usunięcie referencji miało efekt
         }
 
-        $this->entityService->deleteEntiy($teacher);
+        $this->entityService->deleteEntity($teacher);
 
          
          if ($user) {
-             $this->entityService->deleteEntiy($user);
+             $this->entityService->deleteEntity($user);
          }
         
      }

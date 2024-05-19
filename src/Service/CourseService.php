@@ -7,10 +7,8 @@ use App\Entity\Course;
 use App\Service\EntityService;
 
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
-
-use App\Exception\CourseNotFoundException;
-use App\Exception\TeacherNotFoundException;
-use App\Exception\StudentNotFoundException;
+use App\Exception\CustomException;
+use Exception;
 
 
 class CourseService
@@ -70,7 +68,7 @@ class CourseService
     {
         $course = $this->findCourse($id);
         if (!$course) {
-            throw new \Exception('Course not found');
+            throw CustomException::courseNotFound($id);
         }
         return $course->getTeacher();
     }
@@ -83,7 +81,7 @@ class CourseService
     {
         $teacher = $this->entityService->find(Teacher::class, $teacherId);
         if (!$teacher) {
-            throw new \Exception('Teacher not found');
+            throw CustomException::teacherNotFound($teacherId);
         }
         return $teacher->getCourses()->toArray();
     }
@@ -92,10 +90,27 @@ class CourseService
     {
         $teacher = $this->entityService->find(Teacher::class, $teacherId);
         if (!$teacher) {
-            throw new \Exception("Brak nauczyciela o id: {$teacherId}");
+            throw CustomException::teacherNotFound($teacherId);
         }
 
         return $this->entityService->findEntitiesByField(Course::class, 'teacher', $teacher);
+    }
+
+    // pobieranie wszystkich studentów danego kursu
+    /**
+     * @return Student[]
+     */
+    public function findCourseStudents(int $courseId): array
+    {
+        $course = $this->findCourse($courseId);
+        if (!$course) {
+            throw CustomException::courseNotFound($courseId);
+        }
+        $students = [];
+        foreach ($course->getEnrollments() as $enrollment) {
+            $students[] = $enrollment->getStudent();
+        }
+        return $students;
     }
 
     // pobieranie wszystkich kursów studenta
@@ -106,7 +121,7 @@ class CourseService
     {
         $student = $this->findStudent($studentId);
         if (!$student) {
-            throw new \Exception('Student not found');
+            throw CustomException::studentNotFound($studentId);
         }
         return $student->getCourses()->toArray();
     }
@@ -116,7 +131,7 @@ class CourseService
     {
         $course = $this->findCourse($courseId);
         if (!$course) {
-            throw new \Exception('Course not found');
+            throw CustomException::courseNotFound($id);
         }
 
         $students = [];
@@ -133,7 +148,7 @@ class CourseService
     {
         $teacher = $this->entityService->find(Teacher::class, $teacherId);
         if (!$teacher) {
-            return $this->json(['error' => "Brak nauczyciela o id: {$teacherId}"], JsonResponse::HTTP_CONFLICT);
+            throw CustomException::teacherNotFound($teacherId);
         }
 
         $courseData = [
@@ -143,6 +158,7 @@ class CourseService
             'capacity' => $capacity,
             'active' => $active
         ];
+
         $savedCourse = $this->entityService->addEntity(Course::class, $courseData);
 
         return $savedCourse;      
@@ -153,13 +169,13 @@ class CourseService
     {
         $course = $this->findCourse($id);
         if (!$course) {
-            throw new CourseNotFoundException("Brak kursu o id: {$id}");
+            throw CustomException::courseNotFound($id);
         }        
 
        // Znajdź nauczyciela
         $teacher = $this->entityService->find(Teacher::class, $teacherId);
         if (!$teacher) {
-            throw new TeacherNotFoundException("Brak nauczyciela o id: {$teacherId}");
+            throw CustomException::teacherNotFound($teacherId);
         }
 
         $courseData = [
@@ -180,22 +196,49 @@ class CourseService
     {
         $course = $this->findCourse($id);
         if (!$course) {
-            throw new CourseNotFoundException("Nie znaleziono kursu o id {$courseId}");
+            throw CustomException::courseNotFound($id);
         }
 
         // Obsłuż nauczyciela, jeśli jest przekazany w danych
         if (isset($data['teacherId'])) {
             $teacher = $this->entityService->find(Teacher::class, $data['teacherId']);
-        if (!$teacher) {
-            throw new TeacherNotFoundException("Brak nauczyciela o id");
-        }
-
-        $data['teacher'] = $teacher;
-        unset($data['teacherId']); // Usuń teacherId z danych, aby nie powodować błędów przy aktualizacji pól
+            if (!$teacher) {
+                throw CustomException::teacherNotFound($data['teacherId']);
+            }
+            $data['teacher'] = $teacher;
+            unset($data['teacherId']); // Usuiecie teacherId z danych, aby nie powodować błędów przy aktualizacji pól
         }
 
         $course = $this->entityService->updateEntityWithFields($course, $data);
         
+        return $course;
+    }
+
+    // aktualizacja liczby miejsc
+    public function updateCourseCapacity(int $id, int $capacity): Course
+    {
+        $course = $this->findCourse($id);
+        if (!$course) {
+            throw CustomException::courseNotFound($id);
+        }
+
+        $course->setCapacity($capacity);
+        $this->entityService->updateEntity($course);
+
+        return $course;
+    }
+
+    // aktualizacja statusu kursu
+    public function updateCourseActive(int $id, bool $active): Course
+    {
+        $course = $this->findCourse($id);
+        if (!$course) {
+            throw CustomException::courseNotFound($id);
+        }
+
+        $course->setActive($active);
+        $this->entityService->updateEntity($course);
+
         return $course;
     }
 
@@ -204,10 +247,10 @@ class CourseService
     {
         $course = $this->findCourse($id);
         if (!$course) {
-            throw new \Exception('Nie znaleziono kursu');
+            throw CustomException::courseNotFound($id);
         }
 
-        $this->entityService->deleteEntiy($course);
+        $this->entityService->deleteEntity($course);
     }
 
 

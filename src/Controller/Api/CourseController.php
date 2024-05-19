@@ -15,8 +15,8 @@ use JMS\Serializer\SerializerInterface;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Annotation\Model;
 
-use App\Exception\CourseNotFoundException;
-use App\Exception\TeacherNotFoundException;
+use App\Exception\CustomException;
+use Exception;
 
 #[OA\Tag(name: "Kursy")]
 #[Route("/api", "")]
@@ -64,7 +64,7 @@ class CourseController extends AbstractController
         }
 
         if (!$courses) {
-            return $this->json(['error' => 'Nie znaleziono żadnego kursu'], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Nie znaleziono żadnego kursu spełniającego podane kryteria'], JsonResponse::HTTP_NOT_FOUND);
         }
 
         $data = [];
@@ -107,11 +107,12 @@ class CourseController extends AbstractController
     #[Route('/courses/{id}', name: 'api_courses_id', methods: ['GET'])]
     public function getCourseById(int $id): Response
     {
+
         $course = $this->courseService->findCourse($id);
          // Sprawdzenie, czy teacher został znaleziony
          if (!$course) {
             // Jeśli nie znaleziono nauczyciela, zwróć odpowiedź z błędem 404
-            return $this->json(['error' => 'Nie znaleziono kursu o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Nie znaleziono kursu o id ' . $id, 'code' => Response::HTTP_NOT_FOUND], Response::HTTP_NOT_FOUND);
         }
 
         $data = [];
@@ -129,7 +130,26 @@ class CourseController extends AbstractController
                 'method' => 'GET',
                 'value' => $idTeacher
             ],
-            'allStudents' => []
+            'allStudents' => [],
+            'edit' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'PUT'
+            ],
+            'update' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'PATCH'
+            ],
+            'delete' => [
+                'route' => 'api_courses_id',
+                'param' => 'id',
+                'method' => 'DELETE'
+            ],
+            'create' => [
+                'route' => 'api_courses_add',
+                'method' => 'POST'
+            ]
         ];
 
          // Dodajemy studentów zapisanych na kurs do sekcji allStudents
@@ -173,11 +193,15 @@ class CourseController extends AbstractController
                                                                         'capacity', 
                                                                         'active']);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+            return $this->utilityService->createErrorResponse('Kurs nie został dodany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
-        // Dodanie nwoego kursu
-        $newCourse = $this->courseService->createCourse($data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        try{
+            $newCourse = $this->courseService->createCourse($data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        }  catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Kurs nie został dodany', $e->getMessage(), $e->getStatusCode());
+        }
+
         $idTeacher = $newCourse->getTeacher()->getId();
 
         $linksConfig = [
@@ -197,8 +221,7 @@ class CourseController extends AbstractController
         $courseData = $newCourse->toArray();
         $courseData['_links'] = $this->utilityService->generateHateoasLinks($newCourse, $linksConfig);
 
-        $jsonContent = $this->utilityService->serializeJson($courseData);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+        return $this->utilityService->createSuccessResponse('Dodano nowy kurs.', ['course' => $data], Response::HTTP_CREATED);
     }
 
     /**
@@ -217,17 +240,17 @@ class CourseController extends AbstractController
             //pobieranie i walidacja danych
             $data = $this->utilityService->validateAndDecodeJson($request, ['title', 'description', 'teacherId', 'capacity', 'active']);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
-        }
-
-        try {
-            $editedCourse = $this->courseService->editCourse($id, $data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
-        } catch (CourseNotFoundException | TeacherNotFoundException  $e) {
-            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
+            // Obsługa wyjątków
+             return $this->utilityService->createErrorResponse('Kurs nie został edytowany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);         
         }
 
         // Edycja kursu
-        
+        try {
+            $editedCourse = $this->courseService->editCourse($id, $data['title'], $data['description'], $data['teacherId'] ,$data['capacity'], $data['active']);
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Kurs nie został edytowany', $e->getMessage(), $e->getStatusCode());
+        }
+
         $idTeacher = $editedCourse->getTeacher()->getId();
 
         $data = [];
@@ -248,9 +271,9 @@ class CourseController extends AbstractController
 
         $courseData = $editedCourse->toArray();
         $courseData['_links'] = $this->utilityService->generateHateoasLinks($editedCourse, $linksConfig);
+        $data[] = $courseData;
 
-        $jsonContent = $this->utilityService->serializeJson($courseData);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+        return $this->utilityService->createSuccessResponse('Pomyślnie edytowano kurs.', ['course' => $data], Response::HTTP_OK);
     }
 
     /** Aktualizacja kursu o podanym id 
@@ -268,7 +291,6 @@ class CourseController extends AbstractController
         if (json_last_error() !== JSON_ERROR_NONE) {
             return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
         }
-
 
         try {
             $updatedCourse = $this->courseService->updateCourseFields($id, $data);
@@ -293,15 +315,17 @@ class CourseController extends AbstractController
             $courseData = $updatedCourse->toArray();
             $courseData['_links'] = $this->utilityService->generateHateoasLinks($updatedCourse, $linksConfig);
     
-            $jsonContent = $this->utilityService->serializeJson($courseData);
-            return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);  
+            return $this->utilityService->createSuccessResponse('Pomyślnie zaktualizowano kurs.', ['course' => $courseData], Response::HTTP_OK);     
 
 
-
-
-        } catch (\Exception $e) {           
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
-        }
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Kurs nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+        }  
 
     }
 
@@ -318,10 +342,15 @@ class CourseController extends AbstractController
     {
         try {
             $this->courseService->deleteCourse($id);
-            return $this->json(['message' => 'Kurs został usunięty'], JsonResponse::HTTP_OK);
-        } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], JsonResponse::HTTP_NOT_FOUND);
-        }
+            return $this->json(['status' => 'Kurs został usunięty.', 'code' => Response::HTTP_OK], Response::HTTP_OK);
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Kurs nie został usunięty', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }  
     }
 
 }

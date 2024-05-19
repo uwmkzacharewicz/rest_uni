@@ -42,6 +42,11 @@ security:
         ROLE_STUDENT: [ROLE_USER]
 
     access_control:
+        # - { path: ^/api/courses, roles: [ROLE_TEACHER, ROLE_ADMIN] }
+        # - { path: ^/api/teachers, roles: ROLE_TEACHER }
+        # - { path: ^/api/students, roles: ROLE_STUDENT }
+        # - { path: ^/api, roles: ROLE_ADMIN }
+
         # - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         # - { path: ^/api$, roles: IS_AUTHENTICATED_FULLY }
         # - { path: ^/api/students, roles: ROLE_STUDENT }

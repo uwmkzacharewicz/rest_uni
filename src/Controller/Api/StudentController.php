@@ -260,7 +260,7 @@ class StudentController extends AbstractController
         $studentData['_links'] = $this->utilityService->generateHateoasLinks($newStudent, $linksConfig);
         $data[] = $studentData;
 
-        return $this->utilityService->createSuccessResponse('Dodano nowego studenta.', ['student' => $data], JsonResponse::HTTP_CREATED);
+        return $this->utilityService->createSuccessResponse('Dodano nowego studenta.', ['student' => $data], Response::HTTP_CREATED);
 
     }
 
@@ -295,7 +295,6 @@ class StudentController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-             // Obsługa wyjątków
              return $this->utilityService->createErrorResponse('Student nie został edytowany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);         
         }
 
@@ -360,7 +359,7 @@ class StudentController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Niepoprawny JSON'], Response::HTTP_BAD_REQUEST);
         }
 
         try {
@@ -392,7 +391,7 @@ class StudentController extends AbstractController
             return new JsonResponse([
                 'error' => 'Wystąpił błąd',
                 'message' => $e->getMessage()
-            ], JsonResponse::HTTP_INTERNAL_SERVER_ERROR);
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }  
     }
 

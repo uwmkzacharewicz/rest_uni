@@ -69,6 +69,13 @@ class CustomException extends Exception
         return $e;
     }
 
+    public static function teacherNotFound(int $id): self
+    {
+        $e = new self("Nauczyciel o id $id nie istnieje.");
+        $e->statusCode = 404;
+        return $e;
+    }
+
     public static function courseNotFound(int $id): self
     {
         $e = new self("Kurs o id $id nie istnieje.");
@@ -79,6 +86,13 @@ class CustomException extends Exception
     public static function enrollmentNotFound(int $id): self
     {
         $e = new self("Zapis o id $id nie istnieje.");
+        $e->statusCode = 404;
+        return $e;
+    }
+
+    public static function enrollmentByStudentAndCourseNotFound(int $studentId, int $courseId): self
+    {
+        $e = new self("Zapis studenta $studentId na kurs $courseId nie istnieje.");
         $e->statusCode = 404;
         return $e;
     }
@@ -97,6 +111,13 @@ class CustomException extends Exception
         return $e;
     }
 
+    public static function teacherAlreadyExists(string $name): self
+    {
+        $e = new self("Nauczyciel o nazwie $name już istnieje.");
+        $e->statusCode = 409;
+        return $e;
+    }
+
     public static function courseAlreadyExists(string $name): self
     {
         $e = new self("Kurs o nazwie $name już istnieje.");
@@ -104,17 +125,38 @@ class CustomException extends Exception
         return $e;
     }
 
+    public static function studentAlreadyEnrolled(int $studentId, int $courseId): self
+    {
+        $e = new self("Student $studentId jest już zapisany na kurs $courseId.");
+        $e->statusCode = 409;
+        return $e;
+    }
+
+    public static function courseNotActive(int $courseId): self
+    {
+        $e = new self("Kurs {$courseId} jest nieaktywny.");
+        $e->statusCode = 400;
+        return $e;
+    }
+
+    public static function courseFull(int $courseId): self
+    {
+        $e = new self("Brak miejsc na kursie o id $courseId.");
+        $e->statusCode = 400;
+        return $e;
+    }
+
     public static function databaseError(string $message): self
     {
         $e = new self("Błąd bazy danych: $message");
-        $e->statusCode = JsonResponse::HTTP_INTERNAL_SERVER_ERROR;
+        $e->statusCode = 500;
         return $e;
     }
 
     public static function applicationError(string $message): self
     {
         $e = new self("Błąd aplikacji: $message");
-        $e->statusCode = JsonResponse::HTTP_INTERNAL_SERVER_ERROR;
+        $e->statusCode = 500;
         return $e;
     }
 

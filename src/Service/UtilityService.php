@@ -23,9 +23,6 @@ class UtilityService
         $this->passwordHasher = $passwordHasher;
     }
 
-    /** 
-     * Generuje linki HATEOAS dla podanej encji
-     */
     public function generateHateoasLinks($entity, array $linksConfig): array
 {
     $links = [];
@@ -33,8 +30,15 @@ class UtilityService
         if (isset($linkConfig['route'])) {
             $params = [];
             if (isset($linkConfig['param'])) {
-                $paramValue = $linkConfig['value'] ?? $entity->getId();
-                $params[$linkConfig['param']] = $paramValue;
+                if (is_array($linkConfig['param'])) {
+                    foreach ($linkConfig['param'] as $index => $paramName) {
+                        $paramValue = $linkConfig['value'][$index] ?? null;
+                        $params[$paramName] = is_callable($paramValue) ? $paramValue($entity) : $paramValue;
+                    }
+                } else {
+                    $paramValue = $linkConfig['value'] ?? $entity->getId();
+                    $params[$linkConfig['param']] = is_callable($paramValue) ? $paramValue($entity) : $paramValue;
+                }
             }
             $link = [
                 'href' => $this->urlGenerator->generate($linkConfig['route'], $params, UrlGeneratorInterface::ABSOLUTE_URL),
@@ -51,6 +55,36 @@ class UtilityService
 
     return $links;
 }
+
+
+    /** 
+     * Generuje linki HATEOAS dla podanej encji
+     */
+//     public function generateHateoasLinks($entity, array $linksConfig): array
+// {
+//     $links = [];
+//     foreach ($linksConfig as $linkName => $linkConfig) {
+//         if (isset($linkConfig['route'])) {
+//             $params = [];
+//             if (isset($linkConfig['param'])) {
+//                 $paramValue = $linkConfig['value'] ?? $entity->getId();
+//                 $params[$linkConfig['param']] = $paramValue;
+//             }
+//             $link = [
+//                 'href' => $this->urlGenerator->generate($linkConfig['route'], $params, UrlGeneratorInterface::ABSOLUTE_URL),
+//                 'method' => $linkConfig['method']
+//             ];
+//             if (isset($linkConfig['body'])) {
+//                 $link['body'] = $linkConfig['body'];
+//             }
+//             $links[$linkName] = $link;
+//         } elseif (is_array($linkConfig)) {
+//             $links[$linkName] = $this->generateHateoasLinks($entity, $linkConfig);
+//         }
+//     }
+
+//     return $links;
+// }
 
     public function validateAndDecodeJson(Request $request, array $requiredFields): array
     {

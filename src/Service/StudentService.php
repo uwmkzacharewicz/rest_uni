@@ -45,7 +45,7 @@ class StudentService
     {
         $student = $this->findStudent($id);
         if (!$student) {
-            throw new \Exception('Student not found');
+            throw CustomException::studentNotFound($id);
         }
         return $student->getUser();
     }
@@ -75,7 +75,7 @@ class StudentService
     {
         $student = $this->findStudent($studentId);
         if (!$student) {
-            throw new \Exception('Student not found');
+            throw CustomException::studentNotFound($id);
         }
 
         $courses = [];
@@ -102,6 +102,7 @@ class StudentService
         ]);
     }
 
+    // edycja studenta
     public function editStudent(int $id, string $name, string $email): Student
     {
         $student = $this->findStudent($id);
@@ -142,4 +143,6 @@ class StudentService
         $this->entityService->deleteEntity($student);
     }
 }
+
+
 ?>

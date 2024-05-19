@@ -15,6 +15,10 @@ use JMS\Serializer\SerializerInterface;
 use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Annotation\Model;
 
+use App\Exception\CustomException;
+use Exception;
+
+
 
 #[OA\Tag(name: "Nauczyciele")]
 #[Route("/api", "")]
@@ -60,24 +64,8 @@ class TeacherController extends AbstractController
                     'param' => 'id',
                     'method' => 'GET',
                     'value' => $idUser
-                ],
-                'allCourses' => []
+                ]
             ];
-
-
-            // Dodajemy kursy, które prowadzi nauczyciel
-            $courses = $teacher->getCourses();
-            foreach ($courses as $course) {
-                $linksConfig['allCourses']['course_' . $course->getId()] = [
-                    'route' => 'api_courses_id',
-                    'param' => 'id',
-                    'method' => 'GET',
-                    'value' => $course->getId()
-                ];
-            }
-
-
-
 
             $teacherData = $teacher->toArray();
             $teacherData['_links'] = $this->utilityService->generateHateoasLinks($teacher, $linksConfig);
@@ -108,7 +96,7 @@ class TeacherController extends AbstractController
          // Sprawdzenie, czy teacher został znaleziony
          if (!$teacher) {
             // Jeśli nie znaleziono nauczyciela, zwróć odpowiedź z błędem 404
-            return $this->json(['error' => 'Nie znaleziono nauczyciela o id ' . $id], JsonResponse::HTTP_NOT_FOUND);
+            return $this->json(['error' => 'Nie znaleziono nauczyciela o id ' . $id], Response::HTTP_NOT_FOUND);
         }
 
         $data = [];
@@ -127,7 +115,26 @@ class TeacherController extends AbstractController
                 'value' => $idUser
             ],
             'allCourses' => [],
-            'gradesToBeGiven' => []
+            'gradesToBeGiven' => [],
+            'edit' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'PUT'
+            ],
+            'update' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'PATCH'
+            ],
+            'delete' => [
+                'route' => 'api_teachers_id',
+                'param' => 'id',
+                'method' => 'DELETE'
+            ],
+            'create' => [
+                'route' => 'api_teachers_add',
+                'method' => 'POST'
+            ]
         ];
 
         // Dodajemy kursy prowadzone przez nauczyciela do sekcji allCourses
@@ -154,12 +161,10 @@ class TeacherController extends AbstractController
             ];
         }
 
-        
-
         $data = $teacher->toArray();
         $data['user'] = $teacher->getUser() ? $teacher->getUser()->toArray() : null;
         $data['_links'] = $this->utilityService->generateHateoasLinks($teacher, $linksConfig);
-        
+
         $jsonContent = $this->utilityService->serializeJson($data);
         return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
     }
@@ -185,12 +190,17 @@ class TeacherController extends AbstractController
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email', 'specialization' ,'username', 'password']);
         } catch (\Exception $e) {
             // Obsługa wyjątków
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został dodany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
-
        
         // Dodanie nowego nauczyciela
-        $newTeacher = $this->teacherService->createTeacherWithPassword($data['name'], $data['email'], $data['specialization'] ,$data['username'], $data['password']);
+
+        try {
+            $newTeacher = $this->teacherService->createTeacherWithPassword($data['name'], $data['email'], $data['specialization'] ,$data['username'], $data['password']);
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został dodany', $e->getMessage(), $e->getStatusCode());
+        }
+        
         $idUser = $newTeacher->getUser() ? $newTeacher->getUser()->getId() : null;
 
         $data = [];
@@ -213,8 +223,7 @@ class TeacherController extends AbstractController
         $teacherData['_links'] = $this->utilityService->generateHateoasLinks($newTeacher, $linksConfig);
         $data[] = $teacherData;
 
-        $jsonContent = $this->utilityService->serializeJson($data);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+        return $this->utilityService->createSuccessResponse('Dodano nowego nauczyciela.', ['teacher' => $data], Response::HTTP_CREATED);
 
     }
 
@@ -237,11 +246,15 @@ class TeacherController extends AbstractController
             //pobieranie i walidacja danych
             $data = $this->utilityService->validateAndDecodeJson($request, ['name', 'email', 'specialization']);
         } catch (\Exception $e) {
-            return $this->json(['error' => 'Nie przekazano wymaganych danych'], JsonResponse::HTTP_BAD_REQUEST);
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został edytowany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
-        // Edycja nauczyciela
-        $editedTeacher = $this->teacherService->editTeacher($id, $data['name'], $data['email'], $data['specialization']);
+        try {
+            $editedTeacher = $this->teacherService->editTeacher($id, $data['name'], $data['email'], $data['specialization']);
+        } catch (CustomException $e) {
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został edytowany', $e->getMessage(), $e->getStatusCode());
+        }
+
         $idUser = $editedTeacher->getUser() ? $editedTeacher->getUser()->getId() : null;
 
         $data = [];
@@ -264,8 +277,7 @@ class TeacherController extends AbstractController
         $teacherData['_links'] = $this->utilityService->generateHateoasLinks($editedTeacher, $linksConfig);
         $data[] = $teacherData;
 
-        $jsonContent = $this->utilityService->serializeJson($data);
-        return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+        return $this->utilityService->createSuccessResponse('Pomyślnie edytowano nauczyciela.', ['techaer' => $data], Response::HTTP_OK);
 
     }
 
@@ -285,14 +297,12 @@ class TeacherController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
         if (json_last_error() !== JSON_ERROR_NONE) {
-            return $this->json(['error' => 'Invalid JSON'], Response::HTTP_BAD_REQUEST);
+            return $this->json(['error' => 'Niepoprawny JSON'], Response::HTTP_BAD_REQUEST);
         }
 
         try {
             $updatedTeacher = $this->teacherService->updateTeacherFields($id, $data);
             $idUser = $updatedTeacher->getUser() ? $updatedTeacher->getUser()->getId() : null;
-
-            $data = [];
 
             $linksConfig = [
                 'self' => [
@@ -310,14 +320,16 @@ class TeacherController extends AbstractController
 
             $teacherData = $updatedTeacher->toArray();
             $teacherData['_links'] = $this->utilityService->generateHateoasLinks($updatedTeacher, $linksConfig);
-            $status = ['status' => 'Zaktualizowano studenta.' ];
-            $data = array_merge($status, $teacherData);
 
-            $jsonContent = $this->utilityService->serializeJson($data);
-            return new Response($jsonContent, 200, ['Content-Type' => 'application/json']);
+            return $this->utilityService->createSuccessResponse('Pomyślnie zaktualizowano nauczyciela.', ['teacher' => $teacherData], Response::HTTP_OK);
         
-        } catch (\Exception $e) {           
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został zaktualizowany', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
         }   
     }
 
@@ -341,10 +353,15 @@ class TeacherController extends AbstractController
     {
         try {
             $this->teacherService->deleteTeacher($id);
-            return $this->json(['status' => 'Usunięto nauczyciela.'], Response::HTTP_OK);
-        } catch (\Exception $e) {
-            return $this->json(['error' => $e->getMessage()], Response::HTTP_NOT_FOUND);
-        }
+            return $this->json(['status' => 'Usunięto nauczyciela.', 'code' => Response::HTTP_OK], Response::HTTP_OK);
+        } catch (CustomException $e) {     
+            return $this->utilityService->createErrorResponse('Nauczyciel nie został usunięty', $e->getMessage(), $e->getStatusCode());
+        } catch (Exception $e) {
+            return new JsonResponse([
+                'error' => 'Wystąpił błąd',
+                'message' => $e->getMessage()
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }  
     }
 
     
