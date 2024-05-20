@@ -19,6 +19,14 @@ use OpenApi\Attributes as OA;
 use Nelmio\ApiDocBundle\Annotation\Model;
 
 #[OA\Tag(name: "Zapisy na kursy")]
+#[Security(name: 'Bearer')]
+#[IsGranted('ROLE_ADMIN')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api", "")]
 class EnrollmentController extends AbstractController
 {
@@ -39,8 +47,6 @@ class EnrollmentController extends AbstractController
      * Wywołanie wyświetla zapisy na kursy
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca listę zapisów na kursy')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments', name: 'api_enrollments', methods: ['GET'])]
     public function getEnrollments(Request $request): Response
     {
@@ -101,8 +107,6 @@ class EnrollmentController extends AbstractController
      * Wywołanie wyświetla zapis na kurs o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Zwraca zapis na kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments/{id}', name: 'api_enrollments_id', methods: ['GET'])]
     public function getEnrollment(int $id): Response
     {
@@ -171,8 +175,7 @@ class EnrollmentController extends AbstractController
      * Wywołanie dodaje nowy zapis na kurs
      * 
      */
-    #[OA\Response(response: 201, description: 'Zapisano na kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\RequestBody(description: 'Dane do utworzenia nowego zapisu na kurs', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewEnrollment"))]
     #[Route('/enrollments', name: 'api_enrollments_add', methods: ['POST'])]
     public function addEnrollment(Request $request): Response
     {
@@ -220,10 +223,14 @@ class EnrollmentController extends AbstractController
 
         return $this->utilityService->createSuccessResponse('Dodano nowy zapis na kurs.', ['enrollment' => $enrollmentData], Response::HTTP_CREATED); 
     }
-
-    // Wystaw Ocenę
-    #[OA\Response(response: 200, description: 'Oceniono zapis na kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
+ 
+    /**
+     * Wystawia ocenę dla zapisu o podanym id.
+     *
+     * Wywołanie wystawia ocenę dla zapisu kursu o podanym id
+     * 
+     */ 
+    #[OA\RequestBody(description: 'Aktualizuje ocenę dla kursu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/Grade"))]
     #[Route('/enrollments/{id}/grade', name: 'api_enrollments_grade', methods: ['PATCH'])]
     public function gradeEnrollment(int $id, Request $request): Response
     {
@@ -280,9 +287,7 @@ class EnrollmentController extends AbstractController
      * Wywołanie edycji zapisu kursu o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Zaktualizowano zapis na kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
-    #[OA\Response(response: 404, description: 'Not Found')]
+    #[OA\RequestBody(description: 'Edytuje zapis na kurs', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EditEnrollment"))]
     #[Route('/enrollments/{id}', name: 'api_enrollments_edit', methods: ['PUT'])]
     public function editEnrollment(int $id, Request $request): Response
     {
@@ -341,8 +346,7 @@ class EnrollmentController extends AbstractController
      * Wywołanie aktualizuje użytkownika o podanym id lub tworzy nowego użytkownika.
      * 
      */
-    #[OA\Response(response: 200, description: 'Zaktualizowano zapis na kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\RequestBody(description: 'Aktualizuje zapis na kurs', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EditEnrollment"))]
     #[Route('/enrollments/{id}', name: 'api_enrollments_update', methods: ['PATCH'])]
     public function updateEnrollment(int $id, Request $request): Response
     {
@@ -398,8 +402,6 @@ class EnrollmentController extends AbstractController
      * Wywołanie usuwa zapis na kurs o podanym id
      * 
      */
-    #[OA\Response(response: 200, description: 'Usunięto zapis na kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments/{id}', name: 'api_enrollments_delete', methods: ['DELETE'])]
     public function deleteEnrollment(int $id): Response
     {

@@ -47,18 +47,8 @@ class CourseController extends AbstractController
      * Wywołanie wyświetla wszystkie kursy
      * 
      */
-    #[OA\Parameter(
-        name: 'teacherId',
-        in: 'query',
-        description: 'Filtr po id nauczyciela',
-        schema: new OA\Schema(type: 'string')
-    )]
-    #[OA\Parameter(
-        name: 'active',
-        in: 'query',
-        description: 'Filtr po statusie kursu (true/false)',
-        schema: new OA\Schema(type: 'bool')
-    )]    
+    #[OA\Parameter( name: 'teacherId', in: 'query', description: 'Filtr po id nauczyciela', schema: new OA\Schema(type: 'string') )]
+    #[OA\Parameter( name: 'active', in: 'query', description: 'Filtr po statusie kursu (true/false)', schema: new OA\Schema(type: 'bool') )]    
     #[Route('/courses', name: 'api_courses', methods: ['GET'])]
     public function getCourses(Request $request): Response
     {

@@ -6,6 +6,7 @@ use App\Service\StudentService;
 use App\Service\EnrollmentService;
 use App\Service\UtilityService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -14,13 +15,18 @@ use OpenApi\Attributes as OA;
 
 use App\Exception\CustomException;
 use Exception;
-use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
-use Symfony\Component\Security\Http\Attribute\IsGranted;
+
 
 
 #[OA\Tag(name: "Akcje dla studenta")]
 #[Security(name: "Bearer")]
-#[IsGranted('ROLE_STUDENT')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 403, description: 'Brak dostępu')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api/students", "")]
 class StudentActionController extends AbstractController
 {
@@ -37,28 +43,30 @@ class StudentActionController extends AbstractController
         $this->tokenStorage = $tokenStorage;
     }
 
-    /** Zapisuje studenta na kurs
-     * 
-     * Wywołanie zapisuje studenta na kurs
-     * 
-    */
-    #[OA\Response(response: 201, description: 'Student zapisany na kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
-    #[Route('/{studentId}/enrollments', name: 'api_students_enroll', methods: ['POST'])]
-    public function enrollStudent(int $studentId, Request $request): Response
+    private function checkStudentAccess(int $studentId): void
     {
-        $this->denyAccessUnlessGranted('ROLE_STUDENT');
+        //$this->denyAccessUnlessGranted('ROLE_STUDENT');
         $token = $this->tokenStorage->getToken();
         $user = $token->getUser();
 
         $student = $this->studentService->findStudentByUser($user);
 
-        if ($student->getId() !== $studentId) {
-            return $this->json(['error' => 'Nie masz uprawnień do tego zasobu'], Response::HTTP_FORBIDDEN);
-        }
-        
+        if (!$student || $student->getId() !== $studentId) {
+            throw CustomException::accessDenied();
+        }        
+    }
 
+    /** Zapisuje studenta na kurs
+     * 
+     * Wywołanie zapisuje studenta na kurs
+     * 
+    */
+    #[OA\RequestBody(description: 'Dane zapisu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EnrollCourse"))]
+    #[Route('/{studentId}/enrollments', name: 'api_students_enroll', methods: ['POST'])]
+    public function enrollStudent(int $studentId, Request $request): Response
+    {  
         try {
+            $this->checkStudentAccess($studentId);
             $data = $this->utilityService->validateAndDecodeJson($request, ['courseId']);
             $enrollment = $this->enrollmentService->createEnrollment($studentId, $data['courseId']);
 
@@ -89,7 +97,7 @@ class StudentActionController extends AbstractController
             return $this->utilityService->createSuccessResponse('Pomyślnie zapisano na kurs.', ['enrollment' => $enrollmentData], Response::HTTP_OK);  
         
         } catch (CustomException $e) {     
-            return $this->utilityService->createErrorResponse('Zapis nie został usunięty', $e->getMessage(), $e->getStatusCode());
+            return $this->utilityService->createErrorResponse('Zapis nie został dodany', $e->getMessage(), $e->getStatusCode());
         } catch (Exception $e) {
             return new JsonResponse([
                 'error' => 'Wystąpił błąd',
@@ -103,12 +111,11 @@ class StudentActionController extends AbstractController
      *  Wywołanie wypisuje studenta z kursu
      * 
     */
-    #[OA\Response(response: 200, description: 'Student wypisany z kursu')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/{studentId}/enrollments/{enrollmentId}', name: 'api_students_unenroll', methods: ['DELETE'])]
     public function unenrollStudent(int $studentId, int $enrollmentId): Response
     {
         try {
+            $this->checkStudentAccess($studentId);
             $this->enrollmentService->deleteEnrollment($enrollmentId);
             return $this->utilityService->createSuccessResponse('Pomyślnie wypisano z kursu.', [], Response::HTTP_OK);  
         } catch (Exception $e) {
@@ -124,8 +131,6 @@ class StudentActionController extends AbstractController
      * Wywołanie zwraca ocenę studenta z kursu
      * 
     */
-    #[OA\Response(response: 200, description: 'Ocena za kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments/{enrollmentsId}/grade', name: 'api_students_enrollments_grade', methods: ['GET'])]
     public function getGrade(int $enrollmentsId): Response
     {
@@ -133,7 +138,10 @@ class StudentActionController extends AbstractController
             $enrollment = $this->enrollmentService->findEnrollment($enrollmentsId);
             if (!$enrollment) {
                 throw CustomException::enrollmentNotFound($enrollmentsId);
-        } 
+            } 
+            $studentId = $enrollment->getStudent()->getId();
+            $this->checkStudentAccess($studentId);
+
         } catch (CustomException $e) {
             return $this->utilityService->createErrorResponse('Ocena nie została wystawiona', $e->getMessage(), $e->getStatusCode());
         }

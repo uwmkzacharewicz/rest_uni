@@ -27,6 +27,7 @@ security:
             stateless: true
             provider: app_user_provider
             jwt: ~
+            access_denied_handler: App\Security\AccessDeniedHandler
 
         main:
             stateless: true

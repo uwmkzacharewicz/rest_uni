@@ -20,6 +20,13 @@ class CustomException extends Exception
         return $e;
     }
 
+    public static function accessDenied(): self
+    {
+        $e = new self("Nie masz uprawnień do dokonania zmian na tym zasobie.");
+        $e->statusCode = 403;
+        return $e;
+    }
+
     public static function invalidRole(): self
     {
         $e = new self("Nieprawidłowa rola użytkownika.");

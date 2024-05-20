@@ -12,39 +12,7 @@ nelmio_api_doc:
                     type: apiKey
                     description: 'Authorization: Bearer {jwt}'
                     name: Authorization
-                    in: header
-            responses:
-                UserList200:
-                    description: 'Zwraca listę użytkowników'
-                    content:
-                        application/json:
-                            schema:
-                                type: array
-                                items:
-                                    $ref: '#/components/schemas/User'
-                            examples:
-                                userList:
-                                    summary: 'Przykładowa lista użytkowników'
-                                    value:
-                                        - id: 1
-                                          name: 'John Doe'
-                                          email: 'john.doe@example.com'
-                                          _links:
-                                              self:
-                                                  href: 'http://example.com/api/users/1000'
-                                                  method: 'GET'
-                                              login:
-                                                  href: 'http://example.com/api/users/1000/login'
-                                                  method: 'POST'
-                NotFound404:
-                    description: 'Nie znaleziono użytkowników'
-                    content:
-                        application/json:
-                            examples:
-                                notFound:
-                                    summary: 'Przykład odpowiedzi 404'
-                                    value: { message: 'Nie znaleziono użytkowników' }
-            
+                    in: header            
             schemas:
                 User:
                     type: object
@@ -68,7 +36,7 @@ nelmio_api_doc:
                             type: array
                             items:
                                 type: string
-                            example: ["ROLE_USER"]     
+                            example: ["ROLE_ADMIN"]     
                 Roles:
                     type: object
                     properties:
@@ -145,7 +113,19 @@ nelmio_api_doc:
                             example: "John Doe"
                         email:
                             type: string
-                            example: "johndoe@example.com"                                             
+                            example: "johndoe@example.com" 
+                EditTeacher:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            example: "John Doe"
+                        email:
+                            type: string
+                            example: "johndoe@example.com" 
+                        specialization:
+                            type: string
+                            example: "IT"                                           
                 Course:
                     type: object
                     properties:
@@ -208,6 +188,58 @@ nelmio_api_doc:
                         active:
                             type: boolean
                             example: true
+                Enrollment:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 5002
+                        student:
+                            $ref: '#/components/schemas/Student'
+                        course:
+                            $ref: '#/components/schemas/Course'
+                        grade:
+                            type: integer
+                            example: 5
+                NewEnrollment:
+                    type: object
+                    properties:
+                        student_id:
+                            type: integer
+                            example: 3000
+                        course_id:
+                            type: integer
+                            example: 4002
+                    required:
+                        - student_id
+                        - course_id
+                EditEnrollment:
+                    type: object
+                    properties:
+                        student_id:
+                            type: integer
+                            example: 3000
+                        course_id:
+                            type: integer
+                            example: 4002
+                        grade:
+                            type: integer
+                            example: 5
+                EnrollCourse:
+                    type: object
+                    properties:
+                        course_id:
+                            type: integer
+                            example: 4000
+                Grade:
+                    type: object
+                    properties:
+                        grade:
+                            type: integer
+                            example: 5
+                    required:
+                        - grade
+                        
 
                                                       
                 

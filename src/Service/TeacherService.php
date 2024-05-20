@@ -52,7 +52,7 @@ class TeacherService
      */
     public function findTeacherByTeachername(string $TeacherName): ?Teacher
     {
-        return $this->entityService->findEntityByFiled(Teacher::class, 'Teachername', $TeacherName);       
+        return $this->entityService->findEntityByField(Teacher::class, 'Teachername', $TeacherName);       
     }
 
     // pobieranie Teachera po emailu
@@ -61,7 +61,13 @@ class TeacherService
      */
     public function findTeacherByEmail(string $email): ?Teacher
     {
-        return $this->entityService->findEntityByFiled(Teacher::class, 'email', $email);       
+        return $this->entityService->findEntityByField(Teacher::class, 'email', $email);       
+    }
+
+    // Znajdź nauczyciela po użytkowniku
+    public function findTeacherByUser(User $user): ?Teacher
+    {
+        return $this->entityService->findEntityByField(Teacher::class, 'user', $user);       
     }
 
     // Pobieranie loginu Teachera

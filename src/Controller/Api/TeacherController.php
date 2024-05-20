@@ -228,11 +228,7 @@ class TeacherController extends AbstractController
      * Wywołanie pozwala na edycję danych nauczyciela.
      * 
      */ 
-    #[OA\RequestBody(
-        description: 'Dane nauczyciela do aktualizacji',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher")
-    )] 
+    #[OA\RequestBody(description: 'Dane nauczyciela do edycji', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher"))] 
     #[Route('/teachers/{id}', name: 'api_teachers_edit', methods: ['PUT'])]
     public function editTeacher(int $id, Request $request): Response
     {
@@ -282,6 +278,7 @@ class TeacherController extends AbstractController
      * Wywołanie pozwala na aktualizację wybranych pól nauczyciela.
      * 
      */
+    #[OA\RequestBody( description: 'Dane nauczyciela do aktualizacji', required: true, content: new OA\JsonContent(ref: "#/components/schemas/EditTeacher") )] 
     #[Route('/teachers/{id}', name: 'api_teachers_update', methods: ['PATCH'])]
     public function updateTeacherFields(int $id, Request $request): Response
     {

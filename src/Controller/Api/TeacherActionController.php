@@ -2,8 +2,11 @@
 
 namespace App\Controller\Api;
 
-use App\Entity\Enrollment;
+
+use App\Entity\Teacher;
+use App\Entity\User;
 use App\Service\CourseService;
+use App\Service\TeacherService;
 use App\Service\EnrollmentService;
 use App\Service\UtilityService;
 use App\Controller\Api\CourseController;
@@ -14,25 +17,50 @@ use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use OpenApi\Attributes as OA;
-use Symfony\Component\Security\Core\Security;
 
 use App\Exception\CustomException;
 use Exception;
 
 #[OA\Tag(name: "Akcje dla nauczyciela")]
+#[Security(name: "Bearer")]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 403, description: 'Brak dostępu')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api/teachers", "")]
 class TeacherActionController extends AbstractController
 {
     private $courseService;
     private $enrollmentService;
     private $utilityService;
-    private $security;
+    private $teacherService;
 
-    public function __construct(CourseService $courseService, EnrollmentService $enrollmentService, UtilityService $utilityService, Security $security) {
+    public function __construct(CourseService $courseService, EnrollmentService $enrollmentService, UtilityService $utilityService, TeacherService $teacherService) {
         $this->courseService = $courseService;
         $this->enrollmentService = $enrollmentService;
         $this->utilityService = $utilityService;
-        $this->security = $security;
+        $this->teacherService = $teacherService;
+    }
+
+    private function getTeacherFromToken(?int $teacherId = null): ?Teacher
+    {
+        $token = $this->container->get('security.token_storage')->getToken();
+        $user = $token->getUser();
+
+        $teacher = $this->teacherService->findTeacherByUser($user);
+
+        if (!$teacher) {
+            throw CustomException::accessDenied();
+        }
+
+        if ($teacherId !== null && $teacher->getId() !== $teacherId) {
+            throw CustomException::accessDenied();
+        }
+
+        return $teacher;
     }
 
      /** Tworzy nowy kurs 
@@ -40,8 +68,7 @@ class TeacherActionController extends AbstractController
      * Wywołanie tworzy nowy kurs
      * 
     */
-    #[OA\Response(response: 201, description: 'Utworzono nowy kurs')]
-    #[OA\Response(response: 400, description: 'Bad Request')]
+    #[OA\RequestBody(description: 'Dane do utworzenia nowego kursu', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewCourse"))]
     #[Route('/courses', name: 'api_teachers_courses_add', methods: ['POST'])]
     public function addCourseWithTeacher(Request $request): Response
     {
@@ -56,14 +83,9 @@ class TeacherActionController extends AbstractController
             return $this->utilityService->createErrorResponse('Kurs nie został dodany', 'Nie przekazano wymaganych danych', Response::HTTP_BAD_REQUEST);
         }
 
-        // // Pobranie identyfikatora nauczyciela z tokena
-        // $user = $this->security->getUser();
-        // if (!$user) {
-        //     return $this->utilityService->createErrorResponse('Kurs nie został dodany', 'Nie znaleziono użytkownika', Response::HTTP_UNAUTHORIZED);
-        // }
-        // $teacherId = $user->getId();
 
-        $teacherId = 2005;
+        // Pobranie identyfikatora nauczyciela z tokena
+        $teacher = $this->getTeacherFromToken();
 
         try {
             $newCourse = $this->courseService->createCourse($data['title'], $data['description'], $teacherId ,$data['capacity'], $data['active']);
@@ -98,8 +120,6 @@ class TeacherActionController extends AbstractController
      * Wywołanie zmienia limit miejsc na kursie
      * 
     */
-    #[OA\Response(response: 200, description: 'Zaktualizowano kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/capacity', name: 'api_teachers_courses_capacity', methods: ['PATCH'])]
     public function changeCapacity(int $courseId, Request $request): Response
     {
@@ -155,8 +175,6 @@ class TeacherActionController extends AbstractController
      * Wywołanie blokuje możliwość zapisu na kurs
      * 
     */
-    #[OA\Response(response: 200, description: 'Zablokowano rejestrację na kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/block', name: 'api_teachers_courses_block', methods: ['PATCH'])]
     public function blockCourse(int $courseId): Response
     {
@@ -189,8 +207,6 @@ class TeacherActionController extends AbstractController
      * Wywołanie odblokowuje możliwość zapisu na kurs
      * 
     */
-    #[OA\Response(response: 200, description: 'Odblokowano rejestrację na kurs')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/unblock', name: 'api_teachers_courses_unblock', methods: ['PATCH'])]
     public function unblockCourse(int $courseId): Response
     {
@@ -223,8 +239,6 @@ class TeacherActionController extends AbstractController
      * Wywołanie zwraca listę studentów na danym kursie
      * 
     */
-    #[OA\Response(response: 200, description: 'Lista studentów na kursie')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/courses/{courseId}/students', name: 'api_teachers_courses_students', methods: ['GET'])]
     public function getCourseStudents(int $courseId): Response
     {
@@ -262,8 +276,6 @@ class TeacherActionController extends AbstractController
      * Wywołanie wystawia ocenę dla studenta
      * 
     */
-    #[OA\Response(response: 200, description: 'Wystawienie oceny dla studenta')]
-    #[OA\Response(response: 404, description: 'Not Found')]
     #[Route('/enrollments/{enrollmentsId}/grade', name: 'api_teachers_enrollments_grade', methods: ['PATCH'])]
     public function gradeStudent(int $enrollmentsId, Request $request): Response
     {

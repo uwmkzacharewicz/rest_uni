@@ -23,6 +23,13 @@ use Exception;
 
 #[OA\Tag(name: "Użytkownicy")]
 #[Security(name: 'Bearer')]
+#[IsGranted('ROLE_ADMIN')]
+#[OA\Response(response: 200, description: 'OK')]
+#[OA\Response(response: 201, description: 'Zasób został dodany')]
+#[OA\Response(response: 400, description: 'Błąd w przesłanych danych')]
+#[OA\Response(response: 404, description: 'Zasób nie znaleziony')]
+#[OA\Response(response: 409, description: 'Konflikt danych')]
+#[OA\Response(response: 500, description: 'Błąd serwera')]
 #[Route("/api", "")]
 class UserController extends AbstractController
 {
@@ -43,8 +50,6 @@ class UserController extends AbstractController
      * Wywołanie wyświetla wszystkich użytkowników wraz z ich linkiem do szczegółów.
      * 
      */    
-    #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
-    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
     #[Route('/users', name: 'api_users', methods: ['GET'])]
     public function getUsers() : Response
     {
@@ -79,10 +84,7 @@ class UserController extends AbstractController
      *
      * Wywołanie wyświetla szczegóły użytkownika o podanym id.
      * 
-     */
-    
-    #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
-    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
+     */   
     #[Route('/users/{id}', name: 'api_users_id', methods: ['GET'])]
     public function getUserbyId(int $id) : Response
     {
@@ -118,11 +120,7 @@ class UserController extends AbstractController
      * Wywołanie dodaje nowego użytkownika.
      * 
      */
-    #[OA\Response(response: 201, description: 'Poprawnie dodano użytkownika', content: new OA\JsonContent(ref: "#/components/responses/UserList200"))]
-    //#[OA\Response(response: 400, description: 'Nie przekazano wymaganych danych', content: new OA\JsonContent(ref: "#/components/responses/Error400"))]
-    //#[OA\Response(response: 404, description: 'Nie znaleziono', content: new OA\JsonContent(ref: "#/components/schemas/NotFound404"))]
     #[OA\RequestBody(description: 'Dane nowego użytkownika', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewUser"))]    
-    //#[QA\Security(name: [['bearerAuth' => []]])]
     #[Route('/users', name: 'api_users_add', methods: ['POST'])]
     public function addUser(Request $request) : Response
     {
@@ -169,12 +167,9 @@ class UserController extends AbstractController
      * Wywołanie edycji użytkownika o podanym id lub tworzy nowego użytkownika.
      * 
      */
-    #[Route('/users/{id}', name: 'api_users_edit', methods: ['PUT'])]
-    
+   
     #[OA\RequestBody(description: 'Dane użytkownika do aktualizacji', required: true, content: new OA\JsonContent(ref: "#/components/schemas/NewUser"))] 
-    #[OA\Response(response: 200, ref: '#/components/responses/UserList200' )]
-    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404'
-    )]
+    #[Route('/users/{id}', name: 'api_users_edit', methods: ['PUT'])]
     public function editUser(Request $request, int $id): Response
     {
 
@@ -212,13 +207,7 @@ class UserController extends AbstractController
      * 
      */
     
-    #[OA\RequestBody(
-        description: 'Dane użytkownika do aktualizacji',
-        required: true,
-        content: new OA\JsonContent(ref: "#/components/schemas/Roles")
-    )]
-    #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
-    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404')]
+    #[OA\RequestBody( description: 'Dane użytkownika do aktualizacji', required: true, content: new OA\JsonContent(ref: "#/components/schemas/Roles") )]
     #[Route('/users/{id}', name: 'api_users_update', methods: ['PATCH'])]
     public function updateUser(Request $request, int $id): Response
     {
@@ -262,8 +251,6 @@ class UserController extends AbstractController
      * 
      */
     #[Route('/users/{id}', name: 'api_users_delete', methods: ['DELETE'])]
-    #[OA\Response(response: 200, ref: '#/components/responses/UserList200')]
-    #[OA\Response(response: 404, ref: '#/components/responses/NotFound404' )]
     public function deleteUser(int $id): Response
     {
         try {
@@ -280,50 +267,49 @@ class UserController extends AbstractController
         } 
     }
 
-    
+    // /**
+    //  * Loguje użytkownika.
+    //  *
+    //  * Wywołanie loguje użytkownika o podanym id.
+    //  * 
+    //  */
+    // #[OA\RequestBody(
+    //     description: 'Dane użytkownika do aktualizacji',
+    //     required: true,
+    //     content: new OA\JsonContent(ref: "#/components/schemas/User")
+    // )]
+    // #[Route('/users/{id}/login', name: 'api_users_login', methods: ['POST'])]
+    // public function loginUser(int $id, Request $request) : Response
+    // {
+    //     $user = $this->userService->findUser($id);
 
+    //     if (!$user) {
+    //         throw new HttpException(404, 'User not found');
+    //     }
 
+    //     // Pobranie danych z żądania
+    //     $data = json_decode($request->getContent(), true);
+    //     if (json_last_error() !== JSON_ERROR_NONE) {
+    //         throw new \Exception('JSON decode error: ' . json_last_error_msg());
+    //     }
 
-    /**
-     * Loguje użytkownika.
-     *
-     * Wywołanie loguje użytkownika o podanym id.
-     * 
-     */
-    #[Route('/users/{id}/login', name: 'api_users_login', methods: ['POST'])]
-    public function loginUser(int $id, Request $request) : Response
-    {
-        $user = $this->userService->findUser($id);
+    //     // Sprawdzenie, czy przekazano hasło
+    //     if (!isset($data['password'])) {
+    //         return $this->json(['error' => 'Password is required'], JsonResponse::HTTP_BAD_REQUEST);
+    //     }
 
-        if (!$user) {
-            throw new HttpException(404, 'User not found');
-        }
+    //     // Sprawdzenie poprawności hasła
+    //     if (!$this->userService->isPasswordValid($user, $data['password'])) {
+    //         return $this->json(['error' => 'Invalid password'], JsonResponse::HTTP_UNAUTHORIZED);
+    //     }
 
-        // Pobranie danych z żądania
-        $data = json_decode($request->getContent(), true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('JSON decode error: ' . json_last_error_msg());
-        }
+    //     return $this->json([
+    //         'username' => $user->getUsername(),
+    //         'roles' => $user->getRoles(),
+    //         'token' => $this->container->get('lexik_jwt_authentication.encoder')
+    //             ->encode(['username' => $user->getUsername()]),
+    //     ]);
+    // }
 
-        // Sprawdzenie, czy przekazano hasło
-        if (!isset($data['password'])) {
-            return $this->json(['error' => 'Password is required'], JsonResponse::HTTP_BAD_REQUEST);
-        }
-
-        // Sprawdzenie poprawności hasła
-        if (!$this->userService->isPasswordValid($user, $data['password'])) {
-            return $this->json(['error' => 'Invalid password'], JsonResponse::HTTP_UNAUTHORIZED);
-        }
-
-        return $this->json([
-            'username' => $user->getUsername(),
-            'roles' => $user->getRoles(),
-            'token' => $this->container->get('lexik_jwt_authentication.encoder')
-                ->encode(['username' => $user->getUsername()]),
-        ]);
-    }
-    
-    
-    
    
 }
