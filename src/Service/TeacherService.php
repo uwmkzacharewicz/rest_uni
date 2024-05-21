@@ -67,7 +67,7 @@ class TeacherService
     // Znajdź nauczyciela po użytkowniku
     public function findTeacherByUser(User $user): ?Teacher
     {
-        return $this->entityService->findEntityByField(Teacher::class, 'user', $user);       
+        return $this->entityService->findEntityByField(Teacher::class, 'login', $user);       
     }
 
     // Pobieranie loginu Teachera

@@ -155,7 +155,7 @@ nelmio_api_doc:
                         description:
                             type: string
                             example: "Opis kursu"
-                        teacher_id:
+                        teacherId:
                             type: integer
                             example: 2000                        
                         capacity:
@@ -167,7 +167,27 @@ nelmio_api_doc:
                     required:
                         - title
                         - description
-                        - teacher_id  
+                        - teacherIid  
+                        - capacity
+                        - active
+                AddCourse:
+                    type: object
+                    properties:
+                        title:
+                            type: string
+                            example: "Nazwa kursu"
+                        description:
+                            type: string
+                            example: "Opis kursu"                    
+                        capacity:
+                            type: integer  
+                            example: 10
+                        active:
+                            type: boolean
+                            example: true 
+                    required:
+                        - title
+                        - description
                         - capacity
                         - active
                 EditCourse:
@@ -204,22 +224,22 @@ nelmio_api_doc:
                 NewEnrollment:
                     type: object
                     properties:
-                        student_id:
+                        studentId:
                             type: integer
                             example: 3000
-                        course_id:
+                        courseId:
                             type: integer
                             example: 4002
                     required:
-                        - student_id
-                        - course_id
+                        - studentId
+                        - courseId
                 EditEnrollment:
                     type: object
                     properties:
-                        student_id:
+                        studentId:
                             type: integer
                             example: 3000
-                        course_id:
+                        courseId:
                             type: integer
                             example: 4002
                         grade:
@@ -228,7 +248,7 @@ nelmio_api_doc:
                 EnrollCourse:
                     type: object
                     properties:
-                        course_id:
+                        courseId:
                             type: integer
                             example: 4000
                 Grade:
@@ -239,6 +259,14 @@ nelmio_api_doc:
                             example: 5
                     required:
                         - grade
+                Capacity:
+                    type: object
+                    properties:
+                        capacity:
+                            type: integer
+                            example: 10
+                    required:
+                        - capacity
                         
 
                                                       

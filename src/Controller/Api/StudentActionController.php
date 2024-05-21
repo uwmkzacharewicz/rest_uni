@@ -131,7 +131,7 @@ class StudentActionController extends AbstractController
      * Wywołanie zwraca ocenę studenta z kursu
      * 
     */
-    #[Route('/enrollments/{enrollmentsId}/grade', name: 'api_students_enrollments_grade', methods: ['GET'])]
+    #[Route('/enrollments/{enrollmentId}/grade', name: 'api_students_enrollments_grade', methods: ['GET'])]
     public function getGrade(int $enrollmentsId): Response
     {
         try{
